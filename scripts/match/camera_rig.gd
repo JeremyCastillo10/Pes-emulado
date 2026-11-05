@@ -8,6 +8,8 @@ var player: Node3D
 var attack_side := 1
 var mode: int = 0
 var shake := 0.0
+var override := ""      # "intro", "replay" o vacío
+var _ot := 0.0
 
 var _focus := Vector3.ZERO
 var _pos_smooth := Vector3(0, 25, 60)
@@ -35,6 +37,9 @@ func _process(delta: float) -> void:
 	if ball == null:
 		return
 	mode = GameSettings.camera_mode
+	if override != "":
+		_cinematic(delta)
+		return
 	var bp := ball.global_position
 	var target_focus := bp
 	if ball.get("velocity") != null:
@@ -80,4 +85,25 @@ func _process(delta: float) -> void:
 		shake = maxf(shake - delta, 0.0)
 		off = Vector3(randf_range(-1, 1), randf_range(-1, 1), 0) * shake * 0.3
 	global_position = _pos_smooth + off
+	look_at(_focus, Vector3.UP)
+
+
+func _cinematic(delta: float) -> void:
+	_ot += delta
+	var target := Vector3.ZERO
+	var pos := Vector3.ZERO
+	if override == "intro":
+		target = Vector3(sin(_ot * 0.25) * 6.0, 1.5, 6.0)
+		pos = Vector3(sin(_ot * 0.25) * 9.0, 2.6 + _ot * 0.15, 15.0 - _ot * 0.25)
+		fov = lerpf(fov, 45.0, 0.05)
+	else:
+		# Repetición: cámara baja que gira alrededor del balón
+		var bp := ball.global_position
+		target = bp + Vector3(0, 0.6, 0)
+		pos = bp + Vector3(cos(_ot * 0.35) * 9.0, 2.2, sin(_ot * 0.35) * 9.0 + 2.0)
+		fov = lerpf(fov, 38.0, 0.05)
+	var k := 1.0 - exp(-3.0 * delta)
+	_pos_smooth = _pos_smooth.lerp(pos, k)
+	_focus = _focus.lerp(target, k)
+	global_position = _pos_smooth
 	look_at(_focus, Vector3.UP)

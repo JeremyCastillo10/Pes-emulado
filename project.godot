@@ -16,6 +16,13 @@ config/quit_on_go_back=false
 GameSettings="*res://scripts/core/game_settings.gd"
 Lang="*res://scripts/core/lang.gd"
 InputHub="*res://scripts/core/input_hub.gd"
+DB="*res://scripts/core/database.gd"
+Game="*res://scripts/core/game_state.gd"
+Audio="*res://scripts/core/audio_manager.gd"
+
+[audio]
+
+general/text_to_speech=true
 
 [display]
 

@@ -16,11 +16,13 @@ var sun: DirectionalLight3D
 var env: WorldEnvironment
 var lamp_material: StandardMaterial3D
 var _net_age := [10.0, 10.0]
+var stadium_cfg: Dictionary = {}
 var _rng := RandomNumberGenerator.new()
 
 
-func build() -> void:
-	_rng.seed = 2012
+func build(cfg: Dictionary = {}) -> void:
+	stadium_cfg = cfg
+	_rng.seed = hash(str(cfg.get("name", "Golazo")))
 	_build_environment()
 	_build_pitch()
 	_build_goal(1)
@@ -32,6 +34,18 @@ func build() -> void:
 	_build_crowd()
 	apply_time_of_day(GameSettings.time_of_day)
 	set_wet(GameSettings.wet_pitch)
+
+
+## Construcción por partes, repartida en varios fotogramas (carga en segundo plano).
+func build_async(cfg: Dictionary, progress: Callable) -> void:
+	stadium_cfg = cfg
+	_rng.seed = hash(str(cfg.get("name", "Golazo")))
+	var steps := [_build_environment, _build_pitch, func() -> void: _build_goal(1), func() -> void: _build_goal(-1),
+		_build_ad_boards, _build_benches, _build_stands, _build_floodlights, _build_crowd]
+	for i in steps.size():
+		steps[i].call()
+		progress.call(float(i + 1) / steps.size())
+		await get_tree().process_frame
 
 
 func _process(delta: float) -> void:
@@ -140,7 +154,7 @@ func _build_pitch() -> void:
 	mi.mesh = plane
 	pitch_material = ShaderMaterial.new()
 	pitch_material.shader = load("res://shaders/pitch.gdshader")
-	pitch_material.set_shader_parameter("pattern", _rng.randi_range(0, 4))
+	pitch_material.set_shader_parameter("pattern", int(stadium_cfg.get("pattern", _rng.randi_range(0, 4))))
 	mi.material_override = pitch_material
 	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	add_child(mi)
@@ -330,10 +344,12 @@ func _build_stands() -> void:
 	var hl := PitchDims.HALF_LENGTH + STAND_GAP
 	var hw := PitchDims.HALF_WIDTH + STAND_GAP
 	# Laterales: largo 2*hl, fondos: largo 2*hw
-	_stand(Vector3(0, 0, -hw), Vector3(1, 0, 0), Vector3(0, 0, -1), hl * 2.0, concrete, Color(0.75, 0.1, 0.12))
-	_stand(Vector3(0, 0, hw), Vector3(-1, 0, 0), Vector3(0, 0, 1), hl * 2.0, concrete, Color(0.1, 0.25, 0.65))
-	_stand(Vector3(hl, 0, 0), Vector3(0, 0, -1), Vector3(1, 0, 0), hw * 2.0, concrete, Color(0.9, 0.75, 0.1))
-	_stand(Vector3(-hl, 0, 0), Vector3(0, 0, 1), Vector3(-1, 0, 0), hw * 2.0, concrete, Color(0.1, 0.5, 0.25))
+	var seat := Color.html(str(stadium_cfg.get("seat_color", "#b01a22")))
+	var seat2 := seat.darkened(0.25) if seat.get_luminance() > 0.3 else seat.lightened(0.25)
+	_stand(Vector3(0, 0, -hw), Vector3(1, 0, 0), Vector3(0, 0, -1), hl * 2.0, concrete, seat)
+	_stand(Vector3(0, 0, hw), Vector3(-1, 0, 0), Vector3(0, 0, 1), hl * 2.0, concrete, seat2)
+	_stand(Vector3(hl, 0, 0), Vector3(0, 0, -1), Vector3(1, 0, 0), hw * 2.0, concrete, seat)
+	_stand(Vector3(-hl, 0, 0), Vector3(0, 0, 1), Vector3(-1, 0, 0), hw * 2.0, concrete, seat2)
 	# Esquinas (bloques simples)
 	var corner := StandardMaterial3D.new()
 	corner.albedo_color = Color(0.45, 0.45, 0.48)
@@ -342,7 +358,8 @@ func _build_stands() -> void:
 	for xs in [-1, 1]:
 		for zs in [-1, 1]:
 			_box(Vector3(xs * (hl + depth * 0.5), top * 0.5, zs * (hw + depth * 0.5)), Vector3(depth, top, depth), corner)
-	_build_roofs(hl, hw, top, depth)
+	if bool(stadium_cfg.get("roof", true)):
+		_build_roofs(hl, hw, top, depth)
 
 
 func _stand(origin: Vector3, along: Vector3, out: Vector3, length: float, mat: Material, seat_color: Color) -> void:
@@ -439,7 +456,7 @@ func _build_floodlights() -> void:
 # ----------------------------------------------------------- Público
 
 func _build_crowd() -> void:
-	var density := GameSettings.crowd_density()
+	var density := GameSettings.crowd_density() * clampf(float(stadium_cfg.get("capacity", 50000)) / 55000.0 + 0.25, 0.35, 1.0)
 	var spacing := 0.62
 	var transforms: Array[Transform3D] = []
 	var colors: Array[Color] = []

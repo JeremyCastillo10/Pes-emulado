@@ -325,7 +325,7 @@ func _process(delta: float) -> void:
 	anim_touch = maxf(anim_touch - delta, 0.0)
 	var target := _target_pose(delta)
 	var rate := BLEND_RATE
-	if anim_state in ["kick", "dive", "throw"]:
+	if anim_state in ["kick", "dive", "throw", "volley", "bicycle", "header", "backheel", "punch"]:
 		rate = 24.0
 	var k := 1.0 - exp(-rate * delta)
 	for key in target:
@@ -369,6 +369,135 @@ func _target_pose(delta: float) -> Dictionary:
 			t["sh_r"] = 1.0
 			t["sh_side_l"] = 0.9
 			t["sh_side_r"] = 0.9
+		"header":
+			_pose_stand(t)
+			var a3 := clampf(anim_t / 0.4, 0.0, 1.0)
+			t["height"] = sin(a3 * PI) * 0.38
+			t["head_pitch"] = lerpf(-0.5, 0.6, a3)
+			t["lean"] = lerpf(-0.3, 0.35, a3)
+			t["sh_l"] = 0.9
+			t["sh_r"] = 0.9
+			t["sh_side_l"] = 0.6
+			t["sh_side_r"] = 0.6
+			t["knee_l"] = 0.6
+			t["knee_r"] = 0.6
+		"volley":
+			_pose_kick(t)
+			t["hip_r"] = clampf(t["hip_r"] * 1.35, -1.0, 1.9)
+			t["knee_r"] = 0.1 if t["hip_r"] > 0.0 else 1.2
+			t["roll"] = -0.35
+			t["sh_side_l"] = 1.2
+		"bicycle":
+			var a4 := clampf(anim_t / 0.6, 0.0, 1.0)
+			t["body_pitch"] = lerpf(0.0, -2.5, a4)
+			t["height"] = sin(a4 * PI) * 0.6
+			t["hip_r"] = lerpf(0.5, 2.2, a4)
+			t["hip_l"] = lerpf(0.8, -0.2, a4)
+			t["knee_r"] = 0.1
+			t["knee_l"] = 1.0
+			t["sh_l"] = -0.8
+			t["sh_r"] = -0.8
+			t["sh_side_l"] = 1.3
+			t["sh_side_r"] = 1.3
+			t["lean"] = 0.0
+			t["roll"] = 0.0
+		"backheel":
+			_pose_stand(t)
+			var a5 := clampf(anim_t / 0.3, 0.0, 1.0)
+			t["hip_r"] = lerpf(0.3, -0.9, a5)
+			t["knee_r"] = lerpf(0.6, 0.3, a5)
+			t["lean"] = 0.2
+		"punch":
+			_pose_stand(t)
+			var a6 := clampf(anim_t / 0.35, 0.0, 1.0)
+			t["height"] = sin(a6 * PI) * 0.45
+			t["sh_l"] = lerpf(1.0, 3.0, a6)
+			t["sh_r"] = lerpf(1.0, 3.0, a6)
+			t["el_l"] = lerpf(1.5, 0.0, a6)
+			t["el_r"] = lerpf(1.5, 0.0, a6)
+			t["hip_l"] = 0.6
+			t["knee_l"] = 1.0
+		"charge":
+			_pose_locomotion(t, delta)
+			t["roll"] = 0.35
+			t["sh_side_r"] = 0.1
+			t["sh_r"] = 0.2
+			t["el_r"] = 1.4
+		"fall":
+			var a7 := clampf(anim_t / 0.5, 0.0, 1.0)
+			t["body_pitch"] = lerpf(0.0, 1.45, a7)
+			t["height"] = lerpf(0.0, -0.78, a7)
+			t["sh_l"] = lerpf(0.5, 1.6, a7)
+			t["sh_r"] = lerpf(0.5, 1.6, a7)
+			t["sh_side_l"] = 0.8
+			t["sh_side_r"] = 0.8
+			t["hip_l"] = -0.2
+			t["hip_r"] = 0.1
+			t["knee_l"] = 0.3
+			t["knee_r"] = 0.5
+			t["lean"] = 0.0
+			t["roll"] = 0.1
+		"protest":
+			_pose_stand(t)
+			t["sh_l"] = 0.9 + sin(anim_t * 6.0) * 0.2
+			t["sh_r"] = 0.9 + sin(anim_t * 6.0 + 1.0) * 0.2
+			t["sh_side_l"] = 0.9
+			t["sh_side_r"] = 0.9
+			t["el_l"] = 0.3
+			t["el_r"] = 0.3
+			t["head_pitch"] = -0.2
+		"wave":
+			_pose_stand(t)
+			t["sh_r"] = 2.6
+			t["sh_side_r"] = 0.6 + sin(anim_t * 7.0) * 0.35
+			t["el_r"] = 0.4
+		"card":
+			_pose_stand(t)
+			t["sh_r"] = 3.0
+			t["sh_side_r"] = 0.15
+			t["el_r"] = 0.0
+		"airplane":
+			_pose_locomotion(t, delta)
+			t["sh_l"] = 0.1
+			t["sh_r"] = 0.1
+			t["sh_side_l"] = 1.5
+			t["sh_side_r"] = 1.5
+			t["el_l"] = 0.0
+			t["el_r"] = 0.0
+			t["roll"] = sin(anim_t * 2.5) * 0.35
+		"knee_slide":
+			var a8 := clampf(anim_t / 0.5, 0.0, 1.0)
+			t["hip_l"] = -0.2
+			t["hip_r"] = -0.2
+			t["knee_l"] = lerpf(0.2, 1.7, a8)
+			t["knee_r"] = lerpf(0.2, 1.7, a8)
+			t["height"] = lerpf(0.0, -0.45, a8)
+			t["lean"] = -0.45
+			t["sh_l"] = 2.6
+			t["sh_r"] = 2.6
+			t["sh_side_l"] = 0.6
+			t["sh_side_r"] = 0.6
+			t["head_pitch"] = -0.5
+			t["body_pitch"] = 0.0
+			t["roll"] = 0.0
+		"jump_punch":
+			_pose_stand(t)
+			var ph := fmod(anim_t, 0.9) / 0.9
+			t["height"] = sin(ph * PI) * 0.4
+			t["sh_r"] = 3.0
+			t["el_r"] = 0.0
+			t["sh_side_r"] = 0.1
+			t["knee_l"] = 0.4 + sin(ph * PI) * 0.6
+			t["knee_r"] = 0.4 + sin(ph * PI) * 0.6
+		"point_sky":
+			_pose_stand(t)
+			t["sh_l"] = 2.9
+			t["sh_r"] = 2.9
+			t["sh_side_l"] = 0.25
+			t["sh_side_r"] = 0.25
+			t["el_l"] = 0.0
+			t["el_r"] = 0.0
+			t["head_pitch"] = -0.6
 		"celebrate":
 			_pose_stand(t)
 			t["sh_l"] = 2.8
@@ -428,7 +557,7 @@ func _target_pose(delta: float) -> Dictionary:
 
 
 func _pose_stand(t: Dictionary) -> void:
-	for k in ["hip_l", "hip_r", "hip_side_l", "hip_side_r", "twist", "roll", "body_pitch", "head_pitch"]:
+	for k in ["hip_l", "hip_r", "hip_side_l", "hip_side_r", "twist", "roll", "body_pitch", "head_pitch", "head_yaw"]:
 		t[k] = 0.0
 	t["knee_l"] = 0.1
 	t["knee_r"] = 0.1

@@ -25,6 +25,18 @@ var _stats: PanelContainer
 var _stats_box: VBoxContainer
 var _done_btn: Button
 var _cam_lbl: Label
+var _loading: PanelContainer
+var _loading_bar: ProgressBar
+var _replay_rect: ColorRect
+var _replay_lbl: Label
+var _skip_lbl: Label
+var _skip := false
+var _shootout_lbl: Label
+var _subs: PanelContainer
+var _subs_box: VBoxContainer
+var _strat: PanelContainer
+var _strat_box: VBoxContainer
+var _sub_out: FootballPlayer = null
 
 
 func _ready() -> void:
@@ -63,6 +75,7 @@ func _ready() -> void:
 	_build_pause()
 	_build_options()
 	_build_stats()
+	_build_overlays()
 	_done_btn = _button(Lang.t("edit_controls_done"), func() -> void:
 		touch.set_editing(false)
 		_done_btn.visible = false)
@@ -70,6 +83,200 @@ func _ready() -> void:
 	_done_btn.position = Vector2(-60, -30)
 	_done_btn.visible = false
 	_root.add_child(_done_btn)
+
+
+func _build_overlays() -> void:
+	_replay_rect = ColorRect.new()
+	_replay_rect.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_replay_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var sm := ShaderMaterial.new()
+	sm.shader = load("res://shaders/replay_blur.gdshader")
+	_replay_rect.material = sm
+	_replay_rect.visible = false
+	_root.add_child(_replay_rect)
+	_root.move_child(_replay_rect, 0)
+	_replay_lbl = Label.new()
+	_replay_lbl.text = Lang.t("replay")
+	_replay_lbl.position = Vector2(20, 100)
+	_shadowed(_replay_lbl, 30)
+	_replay_lbl.add_theme_color_override("font_color", UITheme.YELLOW)
+	_replay_lbl.visible = false
+	_root.add_child(_replay_lbl)
+	_skip_lbl = Label.new()
+	_skip_lbl.text = Lang.t("skip")
+	_skip_lbl.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
+	_skip_lbl.position = Vector2(-120, -40)
+	_skip_lbl.size = Vector2(240, 30)
+	_skip_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_shadowed(_skip_lbl, 18)
+	_skip_lbl.visible = false
+	_root.add_child(_skip_lbl)
+	_shootout_lbl = Label.new()
+	_shootout_lbl.set_anchors_preset(Control.PRESET_CENTER_TOP)
+	_shootout_lbl.position = Vector2(-300, 70)
+	_shootout_lbl.size = Vector2(600, 40)
+	_shootout_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_shadowed(_shootout_lbl, 24)
+	_shootout_lbl.visible = false
+	_root.add_child(_shootout_lbl)
+	_loading = PanelContainer.new()
+	_loading.set_anchors_preset(Control.PRESET_FULL_RECT)
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = UITheme.NAVY
+	_loading.add_theme_stylebox_override("panel", sb)
+	var cc := CenterContainer.new()
+	_loading.add_child(cc)
+	var v := VBoxContainer.new()
+	v.custom_minimum_size.x = 420
+	cc.add_child(v)
+	var t := _label("GOLAZO PRO", 46)
+	t.add_theme_color_override("font_color", UITheme.YELLOW)
+	t.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	v.add_child(t)
+	var l := _label(Lang.t("loading"), 20)
+	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	v.add_child(l)
+	_loading_bar = _bar(UITheme.YELLOW, 10)
+	_loading_bar.custom_minimum_size.x = 420
+	v.add_child(_loading_bar)
+	_root.add_child(_loading)
+	_subs = _overlay()
+	var cc2 := CenterContainer.new()
+	_subs.add_child(cc2)
+	var sc := ScrollContainer.new()
+	sc.custom_minimum_size = Vector2(900, 600)
+	cc2.add_child(sc)
+	_subs_box = VBoxContainer.new()
+	_subs_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	sc.add_child(_subs_box)
+	_strat = _overlay()
+	var cc3 := CenterContainer.new()
+	_strat.add_child(cc3)
+	_strat_box = VBoxContainer.new()
+	_strat_box.custom_minimum_size.x = 460
+	_strat_box.add_theme_constant_override("separation", 10)
+	cc3.add_child(_strat_box)
+
+
+var _training_lbl: Label
+
+
+func set_training_text(t: String) -> void:
+	if _training_lbl == null:
+		_training_lbl = Label.new()
+		_training_lbl.set_anchors_preset(Control.PRESET_CENTER_TOP)
+		_training_lbl.position = Vector2(-300, 16)
+		_training_lbl.size = Vector2(600, 40)
+		_training_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		_shadowed(_training_lbl, 22)
+		_training_lbl.add_theme_color_override("font_color", UITheme.YELLOW)
+		_root.add_child(_training_lbl)
+	_training_lbl.text = t
+
+
+func show_loading(on: bool) -> void:
+	_loading.visible = on
+
+
+func set_loading(v: float) -> void:
+	_loading_bar.value = v * 100.0
+
+
+func _input(event: InputEvent) -> void:
+	if (event is InputEventScreenTouch and event.pressed) or (event is InputEventKey and event.pressed) or (event is InputEventJoypadButton and event.pressed):
+		_skip = true
+
+
+func consume_skip() -> bool:
+	var s := _skip
+	_skip = false
+	return s
+
+
+func show_replay(on: bool) -> void:
+	_replay_rect.visible = on
+	_replay_lbl.visible = on
+	_skip_lbl.visible = on
+	touch.visible = not on
+	_skip = false
+
+
+func refresh_shootout(so: Dictionary) -> void:
+	_shootout_lbl.visible = true
+	var marks := ["", ""]
+	for i in 2:
+		for k in so["kicks"][i]:
+			marks[i] += "● " if k else "○ "
+	_shootout_lbl.text = "%s  %s|  %s  %s" % [match_node.teams[0].info.get("short", ""), marks[0], marks[1], match_node.teams[1].info.get("short", "")]
+
+
+func _human_team() -> Team:
+	if match_node and match_node.human:
+		return match_node.human.team
+	return null
+
+
+func _open_subs() -> void:
+	_pause.visible = false
+	_sub_out = null
+	_fill_subs()
+	_subs.visible = true
+
+
+func _fill_subs() -> void:
+	for c in _subs_box.get_children():
+		c.queue_free()
+	var t := _human_team()
+	if t == null:
+		return
+	var head := _label(Lang.t("subs") + " · " + Lang.t("subs_left") % (Team.MAX_SUBS - t.subs_made), 26)
+	head.add_theme_color_override("font_color", UITheme.YELLOW)
+	_subs_box.add_child(head)
+	_subs_box.add_child(_label(Lang.t("choose_out") if _sub_out == null else Lang.t("choose_in"), 18))
+	if _sub_out == null:
+		for p in t.players:
+			var txt := "%2d  %-4s %s   %d%%%s" % [int(p.data.get("number", 0)), p.role, p.display_name(), int(p.stamina * p.fitness * 100.0), "  +" if p.injured else ""]
+			var pp := p
+			var b := _button(txt, func() -> void:
+				_sub_out = pp
+				_fill_subs())
+			b.alignment = HORIZONTAL_ALIGNMENT_LEFT
+			_subs_box.add_child(b)
+	else:
+		for d in t.bench:
+			var txt2 := "%2d  %-4s %s   %d" % [int(d.get("number", 0)), str(d.get("position", "")), str(d.get("name", "")), int(d.get("ovr", 0))]
+			var dd: Dictionary = d
+			var b2 := _button(txt2, func() -> void:
+				if t.subs_made < Team.MAX_SUBS:
+					match_node.human_substitution(t, _sub_out, dd)
+				_sub_out = null
+				_fill_subs())
+			b2.alignment = HORIZONTAL_ALIGNMENT_LEFT
+			_subs_box.add_child(b2)
+	_subs_box.add_child(_button(Lang.t("close"), func() -> void:
+		_subs.visible = false
+		_pause.visible = true))
+
+
+func _open_strategy() -> void:
+	_pause.visible = false
+	for c in _strat_box.get_children():
+		c.queue_free()
+	var t := _human_team()
+	var head := _label(Lang.t("strategy"), 30)
+	head.add_theme_color_override("font_color", UITheme.YELLOW)
+	_strat_box.add_child(head)
+	if t != null:
+		for key in Team.STRATEGIES.keys():
+			var k: String = key
+			var b := _menu_button(("▶ " if t.strategy == k else "   ") + Lang.t("strat_" + k), func() -> void:
+				t.strategy = k
+				_open_strategy())
+			_strat_box.add_child(b)
+	_strat_box.add_child(_menu_button(Lang.t("close"), func() -> void:
+		_strat.visible = false
+		_pause.visible = true))
+	_strat.visible = true
 
 
 func setup(m: Node) -> void:
@@ -173,8 +380,8 @@ func _process(_delta: float) -> void:
 		return
 	var c: float = match_node.clock
 	_clock_lbl.text = "%02d:%02d" % [int(c / 60.0), int(fmod(c, 60.0))]
-	var t0: Team = match_node.teams[0]
-	var p := t0.controlled
+	var ht := _human_team()
+	var p: FootballPlayer = ht.controlled if ht else null
 	if p != null:
 		_name_lbl.text = "%d   %s" % [int(p.data.get("number", 0)), p.display_name()]
 		_stamina.value = p.stamina * 100.0
@@ -207,6 +414,11 @@ func on_camera_changed() -> void:
 func toggle_pause() -> void:
 	if _stats.visible:
 		return
+	if _subs.visible or _strat.visible:
+		_subs.visible = false
+		_strat.visible = false
+		_pause.visible = true
+		return
 	if _options.visible:
 		_options.visible = false
 		_pause.visible = true
@@ -233,6 +445,11 @@ func _build_pause() -> void:
 		match_node.cam.cycle_mode()
 		on_camera_changed()))
 	v.add_child(_cam_lbl)
+	v.add_child(_menu_button(Lang.t("subs"), _open_subs))
+	v.add_child(_menu_button(Lang.t("strategy"), _open_strategy))
+	v.add_child(_menu_button(Lang.t("replay_menu"), func() -> void:
+		_pause.visible = false
+		match_node.pause_replay()))
 	v.add_child(_menu_button(Lang.t("stats"), func() -> void:
 		_pause.visible = false
 		show_stats(Lang.t("stats"), false, true)))
@@ -240,7 +457,9 @@ func _build_pause() -> void:
 		_pause.visible = false
 		_options.visible = true))
 	v.add_child(_menu_button(Lang.t("restart_match"), func() -> void: match_node.restart_match()))
-	v.add_child(_menu_button(Lang.t("quit_game"), func() -> void: get_tree().quit()))
+	v.add_child(_menu_button(Lang.t("abandon"), func() -> void:
+		get_tree().paused = false
+		match_node.leave_match()))
 
 
 func _overlay() -> PanelContainer:
@@ -296,11 +515,12 @@ func show_stats(title: String, final: bool, from_pause := false) -> void:
 	head.add_theme_color_override("font_color", UITheme.YELLOW)
 	head.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_stats_box.add_child(head)
-	var sc := _label("%s   %d - %d   %s" % [t0.info.get("name"), m.score[0], m.score[1], t1.info.get("name")], 24)
+	var pen: Array = m._pen_score()
+	var sc := _label("%s   %d - %d   %s%s" % [t0.info.get("name"), m.score[0], m.score[1], t1.info.get("name"), ("   (%d-%d %s)" % [pen[0], pen[1], Lang.t("pen_short")]) if pen.size() == 2 else ""], 24)
 	sc.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_stats_box.add_child(sc)
 	for e in m.events:
-		if e["kind"] == "goal":
+		if e.get("kind", "") == "goal":
 			var gl := _label("%d'  %s%s" % [e["minute"], e["player"], " (p.p.)" if e.get("own_goal", false) else ""], 16)
 			gl.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT if e["team"] == 0 else HORIZONTAL_ALIGNMENT_RIGHT
 			_stats_box.add_child(gl)
@@ -321,12 +541,15 @@ func show_stats(title: String, final: bool, from_pause := false) -> void:
 			_stats.visible = false
 			_pause.visible = true)
 	elif final:
-		btn = _button(Lang.t("play_again"), func() -> void: match_node.restart_match())
-	else:
-		btn = _button(Lang.t("second_half"), func() -> void:
+		btn = _button(Lang.t("continue"), func() -> void:
 			_stats.visible = false
 			get_tree().paused = false
-			match_node.start_second_half())
+			match_node.leave_match())
+	else:
+		btn = _button(Lang.t("continue"), func() -> void:
+			_stats.visible = false
+			get_tree().paused = false
+			match_node.start_next_period())
 	btn.custom_minimum_size = Vector2(300, 56)
 	btn.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	_stats_box.add_child(btn)

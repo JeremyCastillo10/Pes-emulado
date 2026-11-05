@@ -28,6 +28,18 @@ var kit: Dictionary = {}
 var match_node: Node = null
 var ai_active := true          # se desactiva durante saques/celebraciones
 var last_possession := false   # tuvo la posesión por última vez (balón suelto)
+var bench: Array = []          # datos de los suplentes disponibles
+var subs_made := 0
+const MAX_SUBS := 5
+var strategy := "normal"
+const STRATEGIES := {
+	"normal": {"line": 0.0, "press": 1.0, "width": 1.0, "fwd": 1.0, "long": 0.0, "cross": 0.0},
+	"high_press": {"line": 8.0, "press": 1.45, "width": 1.0, "fwd": 1.1, "long": 0.0, "cross": 0.0},
+	"counter": {"line": -8.0, "press": 0.7, "width": 0.95, "fwd": 1.5, "long": 0.35, "cross": 0.0},
+	"possession": {"line": 2.0, "press": 1.1, "width": 1.05, "fwd": 0.55, "long": -0.2, "cross": -0.2},
+	"wings": {"line": 0.0, "press": 1.0, "width": 1.22, "fwd": 1.0, "long": 0.1, "cross": 0.35},
+	"offside_trap": {"line": 6.0, "press": 1.1, "width": 1.0, "fwd": 1.0, "long": 0.0, "cross": 0.0},
+}
 var double_press := false      # el humano pide doble presión
 var keeper_rush := false       # el humano pide la salida del portero
 
@@ -64,6 +76,9 @@ func setup(p_info: Dictionary, p_side: int, p_human: bool, p_ball: Ball, kit_key
 			lineup.append(p)
 	var slots := Formations.slots(formation)
 	var assigned := _assign_slots(lineup, slots)
+	for p in all:
+		if not lineup.has(p) and bench.size() < 12 and int(p.get("injured", 0)) <= 0 and int(p.get("suspended", 0)) <= 0:
+			bench.append(p)
 	for i in slots.size():
 		var pdata: Dictionary = assigned[i]
 		var fp: FootballPlayer = PlayerScene.instantiate()
@@ -102,6 +117,94 @@ func _assign_slots(lineup: Array, slots: Array) -> Array:
 		if result[i] == null and not free.is_empty():
 			result[i] = free.pop_front()
 	return result
+
+
+func strat(key: String) -> float:
+	return float(STRATEGIES.get(strategy, STRATEGIES["normal"]).get(key, 0.0))
+
+
+## Retira a un jugador (expulsión). Si era el portero, otro ocupa su lugar.
+func remove_player(p: FootballPlayer) -> void:
+	players.erase(p)
+	p.active = false
+	p.has_ball = false
+	p.visible = false
+	p.set_physics_process(false)
+	p.position = Vector3(0, -50, 0)
+	if controlled == p:
+		controlled = null
+	if p.is_gk and not players.is_empty():
+		var best: FootballPlayer = null
+		for m in players:
+			if Formations.role_group(m.role) == "DEF" and (best == null or m.attr("reflexes") > best.attr("reflexes")):
+				best = m
+		if best == null:
+			best = players[0]
+		best.is_gk = true
+		best.role = "GK"
+		best.slot_index = 0
+
+
+## Cambio: entra un suplente en la casilla del que sale. Devuelve el nuevo jugador.
+func substitute(out_p: FootballPlayer, in_data: Dictionary) -> FootballPlayer:
+	if subs_made >= MAX_SUBS or not players.has(out_p):
+		return null
+	var slots := Formations.slots(formation)
+	var fp: FootballPlayer = PlayerScene.instantiate()
+	var kits: Dictionary = info.get("kits", {})
+	fp.setup(in_data, kits.get("gk", kit) if out_p.is_gk else kit, ball)
+	fp.is_gk = out_p.is_gk
+	fp.team = self
+	fp.opponents = opponent
+	fp.slot_index = out_p.slot_index
+	fp.role = out_p.role
+	fp.name = "%s_%d" % [str(info.get("short", "T")), int(in_data.get("number", 0))]
+	if not human:
+		fp.stat_mult = diff["stat"]
+		fp.error_mult = diff["err"]
+	match_node.add_child(fp)
+	fp.reset_at(Vector3(0, 0, PitchDims.HALF_WIDTH + 0.5), Vector3(0, 0, -1))
+	var idx := players.find(out_p)
+	players[idx] = fp
+	bench.erase(in_data)
+	out_p.active = false
+	out_p.has_ball = false
+	out_p.visible = false
+	out_p.set_physics_process(false)
+	out_p.position = Vector3(0, -50, 0)
+	if controlled == out_p:
+		controlled = null
+	subs_made += 1
+	return fp
+
+
+## Cambios automáticos de la IA (cansancio o lesión).
+func ai_substitutions(minute: int) -> Array:
+	var done: Array = []
+	if human or subs_made >= MAX_SUBS or bench.is_empty():
+		return done
+	for p in players.duplicate():
+		if subs_made >= MAX_SUBS:
+			break
+		var tired: bool = p.fitness < 0.62 and minute >= 58
+		if not (p.injured or tired):
+			continue
+		var grp := Formations.role_group(p.role)
+		var best: Dictionary = {}
+		for b in bench:
+			var bg := Formations.role_group(str(b.get("position", "CMF")))
+			if (grp == "GK") != (str(b.get("position", "")) == "GK"):
+				continue
+			var score := float(b.get("ovr", 60)) + (8.0 if bg == grp else 0.0)
+			if best.is_empty() or score > float(best.get("_score", 0)):
+				best = b
+				best["_score"] = score
+		if not best.is_empty():
+			best.erase("_score")
+			var np := substitute(p, best)
+			if np != null:
+				done.append([p, np])
+	return done
 
 
 func goalkeeper() -> FootballPlayer:
@@ -183,6 +286,8 @@ func slot_target(p: FootballPlayer) -> Vector3:
 		def_line = clampf(bx - 20.0, -41.0, -4.0)
 		length = 26.0
 		width_m = 21.0
+	def_line += strat("line")
+	width_m *= strat("width")
 	var x_rel := def_line + depth * length
 	if attacking and Formations.role_group(p.role) == "FWD":
 		# Los delanteros se quedan en la línea del último defensor (fuera de juego en Fase 3)
@@ -228,7 +333,7 @@ func find_pass_target(from: FootballPlayer, dir: Vector3, kind: String, power :=
 		var lane := _lane_clearance(origin, point)
 		var space := _space_at(point)
 		score += clampf(lane / 3.0, 0.0, 1.0) * 1.5 + clampf(space / 7.0, 0.0, 1.0) * 1.0
-		score += (to.x * side) / 18.0
+		score += (to.x * side) / 18.0 * strat("fwd")
 		if from.global_position.x * side > 20.0 and to.x * side < -3.0:
 			score -= 1.0  # en el último tercio, no retroceder
 		if preferred > 0.0:
@@ -386,7 +491,7 @@ func _ai_press(p: FootballPlayer, c: FootballPlayer) -> void:
 	# Interponerse entre el portador y la portería; entrar cuando está cerca
 	var t := c.global_position + gs * clampf(d * 0.3, 0.6, 2.0)
 	_go_to(p, t, d > 3.0)
-	if d < 1.4 and _decide(p) and _rng.randf() < diff["press"] * 0.5:
+	if d < 1.4 and _decide(p) and _rng.randf() < diff["press"] * 0.5 * strat("press"):
 		if _rng.randf() < 0.12 * diff["press"]:
 			p.heading = (c.global_position - p.global_position).normalized()
 			p.request_slide()
@@ -427,7 +532,7 @@ func _ai_carrier(p: FootballPlayer) -> void:
 				p.request_kick("shot", clampf(0.45 + dist_goal / 50.0 + _rng.randf_range(-0.1, 0.1), 0.35, 0.9), aim.normalized())
 				return
 		# Centro desde la banda
-		if x_rel > 36.0 and absf(pos.z) > 13.0 and _rng.randf() < 0.6:
+		if x_rel > 36.0 and absf(pos.z) > 13.0 and _rng.randf() < 0.6 + strat("cross"):
 			var box := Vector3(goal.x - side * _rng.randf_range(6.0, 12.0), 0, _rng.randf_range(-6.0, 6.0))
 			var mate := nearest_to(box, false, p)
 			p.request_kick("cross", 0.7, (box - pos).normalized(), mate, box)
@@ -452,7 +557,7 @@ func _ai_carrier(p: FootballPlayer) -> void:
 		var want_pass := pressure < 1.8 or (settled and space_ahead < 5.0 and _rng.randf() < 0.4) or (settled and good_forward and _rng.randf() < 0.2) or (settled and _rng.randf() < 0.04)
 		if not opt.is_empty() and want_pass and float(opt["score"]) > 0.6:
 			var kind := "pass"
-			if float(opt["dist"]) > 28.0 or float(opt["lane"]) < 1.2:
+			if float(opt["dist"]) > 28.0 - strat("long") * 15.0 or float(opt["lane"]) < 1.2:
 				kind = "lob"
 			p.request_kick(kind, 0.6, ((opt["point"] as Vector3) - pos).normalized(), opt["player"], opt["point"])
 			if Engine.has_meta("debug"):

@@ -1,0 +1,141 @@
+# Genera data/lang/narracion_es.json. Variables: {local} {visitante} {equipo} {rival} {jugador}
+# {portero} {marcador} {minuto} {estadio}. "n" = narrador, "c" = comentarista.
+import json
+F = {
+"intro": {"n": [
+ "¡Muy buenas noches, amigos! Bienvenidos al {estadio}, todo listo para {local} contra {visitante}.",
+ "¡Qué ambiente, señoras y señores! {local} y {visitante} saltan a la cancha.",
+ "Estamos en vivo desde el {estadio}. Hoy se miden {local} y {visitante}. ¡Arrancamos!",
+ "Tarde de fútbol grande: {local} recibe a {visitante} con las tribunas a reventar.",
+ "Bienvenidos a esta transmisión. {local} frente a {visitante}, noventa minutos de pura emoción.",
+ "La gente ya está de pie. {local} contra {visitante}. ¡Que ruede la pelota!",
+ "Partido de alto voltaje el que nos espera: {local} ante {visitante}.",
+ "Cancha en perfecto estado, público encendido, y {local} y {visitante} listos para la batalla."],
+ "c": ["Va a ser un partido muy táctico, ojo con la presión de {visitante}.",
+ "{local} necesita imponer condiciones desde el primer minuto.",
+ "Las dos escuadras llegan en buen momento, esto promete.",
+ "Veo a {local} con mucha confianza, pero {visitante} sabe hacer daño a la contra.",
+ "Hay que ganar el mediocampo, ahí se define este partido."]},
+"kickoff": {"n": [
+ "¡Rueda el balón! Comienza el partido.", "¡Pitazo inicial! Ya se juega.", "Mueve {equipo} desde el centro del campo.",
+ "¡Arrancó! {equipo} saca del medio.", "Se pone en marcha el encuentro.", "¡Vamos que ya empezó esto!",
+ "El árbitro da la orden y {equipo} pone el balón en juego."], "c": []},
+"second_half": {"n": [
+ "¡Comienza la segunda mitad!", "Arranca el complemento, {marcador}.", "Se reanuda el juego, segundo tiempo en marcha.",
+ "Volvemos a la acción: segunda parte.", "Cuarenta y cinco minutos más, ¡a todo o nada!"], "c": [
+ "En el descanso seguramente hubo ajustes, veremos qué cambia.", "El que meta el próximo gol se lleva esto, creo yo."]},
+"pass": {"n": [
+ "Toca {jugador}.", "Abre {jugador} hacia la banda.", "Buen pase de {jugador}.", "{jugador} la mueve con calma.",
+ "Pase al pie de {jugador}.", "{jugador} distribuye.", "La pasa {jugador}.", "{jugador} busca a un compañero.",
+ "Juega en corto {jugador}.", "Cambio de frente de {jugador}.", "{equipo} hace circular la pelota.",
+ "Toque y toque de {equipo}.", "Lo tiene {jugador}, levanta la cabeza.", "{jugador} con el balón."], "c": [
+ "Buen manejo de {equipo}, paciencia para encontrar los espacios.", "Así se juega, a ras de piso."]},
+"dribble": {"n": [
+ "¡Qué jugada de {jugador}!", "¡Se la escondió! ¡Qué lujo de {jugador}!", "¡Lo dejó en el camino {jugador}!",
+ "¡Bicicleta de {jugador}!", "¡Cómo maneja la pelota {jugador}!", "¡Encara {jugador}, uno, dos!",
+ "¡Ole! ¡Qué amague de {jugador}!", "¡Se va {jugador}, se va, se va!", "¡Le hizo un caño! ¡Tremendo {jugador}!",
+ "Gambeta de {jugador} que levanta a la tribuna.", "¡Pura magia de {jugador}!", "¡Imparable {jugador} por la banda!"], "c": [
+ "Eso es calidad pura, no se enseña.", "Tiene un cambio de ritmo bárbaro.", "Hay que hacerle falta antes, si no se va."]},
+"shot": {"n": [
+ "¡Remata {jugador}!", "¡Le pega {jugador}!", "¡Disparo de {jugador}!", "¡Sacó el zapatazo {jugador}!",
+ "¡Prueba desde lejos {jugador}!", "¡Le dio con todo {jugador}!", "¡Tiro de {jugador}!", "¡Va el remate!",
+ "¡Lo intenta {jugador}!", "¡Fuerte y abajo, {jugador}!"], "c": []},
+"shot_wide": {"n": [
+ "¡Afuera! Se fue cerquita.", "¡Desviado! Por poco.", "¡Uy, rozando el palo!", "Se va por la línea de fondo.",
+ "¡Afuera por centímetros!", "¡No encontró el arco {jugador}!", "¡Se le fue cruzado!", "¡Qué oportunidad desperdiciada!",
+ "¡Uyyy! ¡Casi, casi!", "Se fue a las tribunas.", "¡Por arriba del travesaño!", "Remate sin dirección."], "c": [
+ "Tenía que acomodarse mejor antes de pegarle.", "Le faltó un poquito de calma ahí.", "Esa no la puede fallar, eh."]},
+"save": {"n": [
+ "¡Atajadón de {portero}!", "¡Qué manera de volar de {portero}!", "¡La sacó {portero}!", "¡Apareció {portero}!",
+ "¡Paradón! ¡{portero} dice que no!", "¡Seguro {portero}!", "¡Se queda con la pelota {portero}!",
+ "¡Manos salvadoras de {portero}!", "¡Qué reflejos de {portero}!", "¡Tapadón del arquero!",
+ "¡La manda al córner {portero}!", "¡Imposible pasar a {portero} hoy!"], "c": [
+ "El arquero está en una tarde increíble.", "Bien ubicado, achicó perfecto.", "Esa era de gol, salvó a su equipo."]},
+"post": {"n": [
+ "¡Al palo! ¡No puede ser!", "¡Pegó en el poste!", "¡El travesaño salva a {rival}!", "¡Uyyy, la madera!",
+ "¡Paloooo! ¡Qué mala suerte!", "¡Se estrelló en el horizontal!", "¡El palo le dice que no a {jugador}!",
+ "¡Tembló el arco! ¡Al poste!"], "c": ["Por centímetros, el fútbol es así de cruel.", "Eso es mala fortuna pura."]},
+"goal": {"n": [
+ "¡GOOOOOOOOOOOOOL! ¡GOL DE {jugador}! ¡GOOOOOL DE {equipo}!",
+ "¡GOOOOOOOOOL! ¡Lo hizo {jugador}! ¡Explota el {estadio}!",
+ "¡GOLAAAAZO! ¡GOOOOOOOL DE {jugador}! ¡Qué manera de definir!",
+ "¡GOOOOOOOOOOL! ¡Adentro! ¡{jugador} la mandó a guardar!",
+ "¡GOOOOOOL! ¡{equipo} se pone {marcador}!",
+ "¡GOOOOOOOOOOOOL! ¡Grítalo, {equipo}! ¡Gol de {jugador}!",
+ "¡Y es GOOOOOOOL! ¡Qué belleza, {jugador}!",
+ "¡GOOOOOOOOOL! ¡A cobrar! ¡{jugador} no perdona!",
+ "¡GOOOOOOOL! ¡Inflaron la red! ¡{jugador}!",
+ "¡GOOOOOOOOOOL! ¡Tremendo gol de {jugador}, para enmarcar!",
+ "¡GOOOOOL! ¡La clavó en el ángulo {jugador}!",
+ "¡GOOOOOOOOOOOL! ¡Celebra {equipo}! ¡{marcador}!"], "c": [
+ "¡Qué golazo! Definición de crack.", "Lo vio antes que nadie, gran gol.", "Eso es potencia y colocación.",
+ "Error defensivo y lo castigaron sin piedad.", "Partido abierto ahora, a ver cómo responde {rival}.",
+ "Se lo merecía {equipo}, venía buscándolo.", "Ese gol cambia todo el planteamiento."]},
+"own_goal": {"n": ["¡Gol en contra! ¡Qué desgracia para {rival}!", "¡En propia puerta! ¡No lo puede creer {rival}!",
+ "¡Autogol! La metió en su propio arco."], "c": ["Desafortunado, quiso despejar y la mandó adentro."]},
+"foul": {"n": [
+ "Falta de {jugador}.", "El árbitro pita la infracción.", "¡Lo bajó {jugador}!", "Infracción, tiro libre.",
+ "Entrada fuerte de {jugador}, falta.", "Se queja {equipo}, pero es falta.", "Lo derriba por detrás.",
+ "Pitazo del árbitro: falta.", "¡Qué patada! Falta clarísima.", "Cortó la jugada con falta {jugador}."], "c": [
+ "Falta táctica, la típica para frenar el contragolpe.", "Llegó tarde, no tenía cómo.", "Esa entrada era evitable."]},
+"advantage": {"n": ["¡Ley de la ventaja! Sigue el juego.", "El árbitro deja seguir, ventaja.", "¡Bien el juez, da la ventaja!"], "c": []},
+"yellow": {"n": [
+ "Tarjeta amarilla para {jugador}.", "Amonestado {jugador}.", "Amarilla, merecida.", "El árbitro saca la amarilla a {jugador}.",
+ "Se lleva la cartulina amarilla {jugador}.", "Primera advertencia para {jugador}."], "c": [
+ "Tendrá que tener cuidado el resto del partido.", "Bien sacada, cortó un ataque peligroso."]},
+"red": {"n": [
+ "¡Tarjeta roja! ¡Expulsado {jugador}!", "¡A la calle! Roja directa para {jugador}.", "¡Se va expulsado {jugador}!",
+ "¡Roja! {equipo} se queda con diez."], "c": ["Deja a su equipo en desventaja, imperdonable.", "Una roja que puede cambiar la historia del partido."]},
+"offside": {"n": [
+ "Posición adelantada.", "¡Fuera de juego! Se anticipó {jugador}.", "Levanta la bandera el asistente: offside.",
+ "Fuera de lugar, por poquito.", "Lo pescaron en offside a {jugador}.", "Bandera arriba, fuera de juego."], "c": [
+ "Buena línea defensiva, lo dejaron adelantado.", "Tiene que estar más atento a la línea."]},
+"corner": {"n": ["Tiro de esquina para {equipo}.", "Córner.", "Saque de esquina, oportunidad para {equipo}.",
+ "Va el córner, todos al área.", "Otro tiro de esquina para {equipo}."], "c": ["Ojo con los grandotes en el área."]},
+"free_kick": {"n": ["Tiro libre peligroso para {equipo}.", "Se para frente al balón {jugador}.", "Barrera armada, ¿quién le pega?",
+ "Tiro libre en zona de peligro.", "Hay distancia para pegarle directo."], "c": ["Puede buscar el palo del arquero o el centro."]},
+"penalty": {"n": ["¡Penal! ¡El árbitro señala el punto penal!", "¡Pena máxima para {equipo}!", "¡Penal! Falta dentro del área.",
+ "¡Se cobra penal! Gran ocasión para {equipo}."], "c": ["Clarísimo, lo derribó dentro del área.", "Penal discutible, pero el árbitro lo vio así."]},
+"penalty_miss": {"n": ["¡Lo falló! ¡Erró el penal {jugador}!", "¡Lo atajó {portero}! ¡Penal detenido!", "¡Afuera el penal!",
+ "¡Increíble, desperdició el penal!"], "c": ["La presión del momento, nunca es fácil."]},
+"injury": {"n": ["Hay un jugador tendido en el césped.", "Atención: {jugador} se resiente.", "Se lesiona {jugador}, entran las asistencias.",
+ "Parece que {jugador} no puede continuar."], "c": ["Ojalá no sea nada grave."]},
+"sub": {"n": ["Cambio en {equipo}: entra {jugador}.", "Modificación en {equipo}, ingresa {jugador}.", "Se prepara {jugador} para entrar.",
+ "Sustitución: entra {jugador} a refrescar al equipo.", "Movimiento en el banco de {equipo}."], "c": [
+ "Cambio lógico, buscaban más piernas frescas.", "Interesante decisión del entrenador."]},
+"chance": {"n": ["¡Ojo, ojo, ojo!", "¡Peligro en el área!", "¡Se viene {equipo}!", "¡Atención que llega {equipo}!",
+ "¡Uy, qué ocasión!", "¡Contragolpe de {equipo}!", "¡Mano a mano!", "¡Llegan con mucha gente!",
+ "¡Centro al área!", "¡Cabezazo!", "¡Pelota dividida en el área!", "¡Rebote, rebote!"], "c": []},
+"tackle": {"n": ["¡Gran quite de {jugador}!", "¡Recupera {jugador}!", "¡Qué barrida de {jugador}, limpia!",
+ "¡Robó la pelota {jugador}!", "¡Corta {jugador}!", "¡Firme en la marca {jugador}!"], "c": ["Excelente lectura defensiva."]},
+"half_time": {"n": ["¡Final del primer tiempo! {marcador}.", "Se termina la primera mitad, {marcador}.",
+ "El árbitro manda al descanso: {marcador}.", "Descanso en el {estadio}. {marcador}."], "c": [
+ "Primer tiempo intenso, hay mucho por corregir.", "Se va ganando con justicia, diría yo.", "Partido muy parejo hasta acá."]},
+"full_time": {"n": ["¡Final del partido! {marcador}.", "¡Se acabó! {marcador}.", "¡Pitazo final en el {estadio}! {marcador}.",
+ "Terminó el encuentro: {marcador}.", "¡No hay más! {marcador}."], "c": [
+ "Gran partido, el público se va satisfecho.", "Resultado justo por lo que se vio.", "Hay que reconocer el esfuerzo de los dos."]},
+"win_end": {"n": ["¡Victoria de {equipo}! ¡Qué alegría para su gente!", "¡Ganó {equipo}! Tres puntos de oro.",
+ "¡{equipo} se lleva el triunfo!"], "c": ["Lo trabajaron bien de principio a fin."]},
+"draw_end": {"n": ["Reparto de puntos, empate.", "Nadie pudo con nadie, empate.", "Termina igualado, cada uno suma."], "c": ["Un empate que deja sabor a poco para los dos."]},
+"comeback": {"n": ["¡Remontada! ¡{equipo} dio vuelta el partido!", "¡Qué reacción de {equipo}! ¡Lo dio vuelta!",
+ "¡Increíble remontada de {equipo}!", "¡Nunca se rindió {equipo} y ahora gana!"], "c": ["Carácter puro, eso es de equipo grande."]},
+"rout": {"n": ["¡Goleada! ¡{equipo} es una aplanadora!", "¡Paliza de {equipo}! {marcador}.", "¡Baile total de {equipo}!",
+ "¡Esto ya es goleada histórica!"], "c": ["{rival} no encuentra respuestas, está desarmado."]},
+"extra_time": {"n": ["¡Vamos a la prórroga!", "¡Tiempo extra! Treinta minutos más.", "No hubo ganador: ¡prórroga!"], "c": ["El físico va a ser determinante ahora."]},
+"shootout": {"n": ["¡Todo se define en los penales!", "¡Tanda de penales! Nervios de acero.", "¡A los once metros se decide todo!"], "c": ["Lotería pura, aunque los arqueros cuentan mucho."]},
+"shootout_goal": {"n": ["¡Adentro!", "¡Convierte!", "¡Gol! No falla.", "¡La pone junto al palo!", "¡Seguro desde los doce pasos!"], "c": []},
+"shootout_miss": {"n": ["¡Falló!", "¡Atajado!", "¡Afuera!", "¡No entró!"], "c": []},
+"trophy": {"n": ["¡{equipo} campeón! ¡Campeóooon!", "¡Levanta la copa {equipo}!", "¡Es de {equipo}! ¡Campeón!"], "c": ["Un título merecidísimo."]},
+"time_late": {"n": ["Se juegan los últimos minutos.", "Queda poquito, el reloj apremia.", "Minuto {minuto}, ya no hay tiempo.",
+ "¡Se viene el final!"], "c": ["Ahora todo es corazón."]},
+"long_ball": {"n": ["¡Pelotazo largo de {jugador}!", "Balón en largo buscando la espalda de la defensa.", "Saca largo {jugador}.",
+ "Envío profundo de {jugador}.", "¡Qué cambio de orientación de {jugador}!", "Balón aéreo al área.", "Centro de {jugador}.",
+ "¡Centro venenoso de {jugador}!"], "c": ["Buscan al delantero por arriba, es una buena opción."]},
+"through": {"n": ["¡Pase filtrado de {jugador}!", "¡Qué pase entre líneas!", "¡Habilitado! Pase en profundidad.",
+ "¡Metió el pase al hueco {jugador}!", "¡La puso donde quería {jugador}!"], "c": ["Visión de juego privilegiada."]},
+"pressure": {"n": ["{equipo} presiona arriba.", "Mucha presión de {equipo} en la salida.", "No dejan pensar a {rival}.",
+ "{equipo} se adelanta y asfixia."], "c": ["Presión alta muy bien coordinada.", "Así se recupera rápido el balón."]},
+"crowd": {"n": ["¡Cómo canta la gente!", "Las tribunas no paran de alentar.", "¡Qué espectáculo en las gradas!", "El estadio es una caldera."], "c": []},
+}
+json.dump(F, open("data/lang/narracion_es.json", "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+print(sum(len(v["n"]) + len(v["c"]) for v in F.values()), "frases")

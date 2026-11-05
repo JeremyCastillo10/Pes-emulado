@@ -67,6 +67,15 @@ static func make_blob_shadow(size: float) -> MeshInstance3D:
 	return mi
 
 
+func mesh_quat() -> Quaternion:
+	return _mesh.quaternion
+
+
+func set_mesh_quat(q: Quaternion) -> void:
+	_mesh.quaternion = q
+	_shadow.global_position = Vector3(position.x, 0.015, position.z)
+
+
 func set_wet(wet: bool) -> void:
 	# Césped mojado: el balón bota menos pero corre más (patina).
 	restitution = 0.5 if wet else 0.62

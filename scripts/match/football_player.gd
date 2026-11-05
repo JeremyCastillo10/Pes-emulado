@@ -9,6 +9,8 @@ signal action_message(text: String)
 signal kicked(player: FootballPlayer, kind: String, power: float)
 signal tackled(winner: FootballPlayer, loser: FootballPlayer)
 signal saved(keeper: FootballPlayer, caught: bool)
+signal foul_committed(offender: FootballPlayer, victim: FootballPlayer, severity: float)
+signal trick_done(player: FootballPlayer, kind: String)
 
 enum State { MOVE, KICK, SLIDE, TRICK, STUMBLE, CELEBRATE, TACKLE, DIVE, LYING, HOLD, THROW, FROZEN }
 
@@ -41,8 +43,15 @@ var charge := 0.0              # lo usa el HUD (carga del golpeo humano)
 var charging_action := ""
 var tackle_cooldown := 0.0
 var possess_time := 0.0        # segundos desde que ganó el balón
+var fitness := 1.0             # cansancio acumulado del partido (tope de la resistencia)
+var injured := false
+var active := true             # false si fue expulsado o sustituido
+var yellow := 0
+var stats := {"goals": 0, "assists": 0, "shots": 0, "passes": 0, "passes_ok": 0, "tackles": 0, "saves": 0, "fouls": 0, "conceded": 0}
+var _feint_time := -10.0
 var stat_mult := 1.0           # multiplicador por dificultad (IA)
 var error_mult := 1.0
+var ai_curl := 0.0
 
 var model: PlayerModel
 var marker: Node3D
@@ -300,6 +309,8 @@ func top_speed(sprint: bool) -> float:
 	if has_ball:
 		top *= 0.9 + 0.07 * attr("dribbling")
 	top *= lerpf(0.78, 1.0, clampf(stamina * 1.6, 0.0, 1.0))
+	if injured:
+		top *= 0.78
 	return top
 
 
@@ -352,7 +363,7 @@ func _update_stamina(dt: float) -> void:
 		stamina -= 0.003 * dt
 	else:
 		stamina += 0.03 * (0.6 + 0.4 * attr("stamina")) * dt
-	stamina = clampf(stamina, 0.0, 1.0)
+	stamina = clampf(stamina, 0.0, fitness)
 
 
 # --------------------------------------------------------- Conducción
@@ -375,7 +386,7 @@ func _update_ball(dt: float) -> void:
 			return
 		if state in [State.KICK, State.SLIDE, State.STUMBLE, State.THROW]:
 			return
-		if state == State.TRICK or state == State.FROZEN:
+		if (state == State.TRICK and not (_trick_kind == "nutmeg" and _trick_done)) or state == State.FROZEN:
 			var hold := global_position + heading * 0.55
 			var corr := (hold - ball.global_position) * 10.0
 			ball.velocity = Vector3(velocity.x + corr.x, 0.0, velocity.z + corr.z)
@@ -397,7 +408,14 @@ func _update_ball(dt: float) -> void:
 	if is_gk and _in_own_area() and state != State.DIVE:
 		if dist < 1.0 + 0.3 * attr("reflexes") and ball.position.y < 2.5:
 			var spd := ball.velocity.length()
-			if spd < 16.0 + 10.0 * attr("reflexes") or _rng.randf() < 0.5 * attr("reflexes"):
+			if ball.position.y > 1.7 and _rng.randf() < 0.35:
+				# Despeje de puños
+				model.play("punch")
+				var away := Vector3(float(team.side), 0, signf(ball.position.z + 0.01) * 0.6).normalized()
+				ball.kick(away * _rng.randf_range(11.0, 16.0) + Vector3.UP * _rng.randf_range(5.0, 8.0), Vector3.ZERO, self)
+				ball.claim_block_time = 0.5
+				saved.emit(self, false)
+			elif spd < 16.0 + 10.0 * attr("reflexes") or _rng.randf() < 0.5 * attr("reflexes"):
 				catch_ball()
 			else:
 				_parry(1.0)
@@ -426,6 +444,15 @@ func gain_possession() -> void:
 	ball.last_touch = self
 	ball.intended_receiver = null
 	_touch_timer = 0.0
+	if human and move_intent.length() > 0.3:
+		# Control orientado: el primer toque lleva el balón hacia el joystick
+		var d := move_intent.normalized()
+		ball.velocity = velocity * 0.4 + d * (2.8 + speed * 0.45) * (0.8 + 0.3 * attr("ball_control"))
+		ball.velocity.y = 0.0
+		heading = heading.slerp(d, 0.5).normalized()
+		_touch_timer = 0.3
+		model.anim_touch = 0.12
+		return
 	_dribble_touch()
 
 
@@ -452,8 +479,15 @@ func _dribble_touch() -> void:
 
 # ------------------------------------------------------------- Golpeos
 
+func _ball_reachable() -> bool:
+	var to := ball.global_position - global_position
+	var flat := Vector2(to.x, to.z).length()
+	return (flat < 1.7 and ball.position.y < 1.3) or (flat < 1.5 and ball.position.y < 2.5)
+
+
 ## kind: pass, through, lob, cross, shot, clear. point: destino (Vector3) o null.
-func request_kick(kind: String, power: float, dir: Vector3, receiver: FootballPlayer = null, point = null) -> bool:
+## style: "" normal, "finesse" (tiro colocado), "chip" (globo).
+func request_kick(kind: String, power: float, dir: Vector3, receiver: FootballPlayer = null, point = null, style := "") -> bool:
 	if not can_act():
 		return false
 	if state == State.HOLD:
@@ -467,16 +501,30 @@ func request_kick(kind: String, power: float, dir: Vector3, receiver: FootballPl
 		if point != null:
 			heading = _flat_dir_to(point)
 		return true
-	if not ball_close(1.7) and state != State.FROZEN:
+	if not _ball_reachable() and state != State.FROZEN:
 		return false
 	_set_state(State.KICK)
-	_kick = {"kind": kind, "power": power, "dir": dir.normalized(), "receiver": receiver, "point": point,
-		"contact": 0.2 if kind == "shot" else 0.14, "curl": InputHub.curl if human else 0.0}
-	_kick_done = false
 	var face := dir.normalized() if point == null else _flat_dir_to(point)
-	heading = heading.slerp(face, 0.65).normalized()
+	# Técnica según la altura del balón y la dirección
+	var tech := "kick"
+	var by := ball.position.y
+	if by > 1.3:
+		tech = "header"
+		if kind == "shot" and by < 2.3 and heading.dot(face) < -0.2 and attr("agility") > 0.6:
+			tech = "bicycle"
+	elif by > 0.45 and kind in ["shot", "pass", "lob", "cross", "through"]:
+		tech = "volley"
+	elif kind == "pass" and heading.dot(face) < -0.6 and speed > 1.0:
+		tech = "backheel"
+	var contact: float = {"kick": 0.2 if kind == "shot" else 0.14, "header": 0.18, "bicycle": 0.3, "volley": 0.16, "backheel": 0.12}[tech]
+	_kick = {"kind": kind, "power": power, "dir": dir.normalized(), "receiver": receiver, "point": point,
+		"contact": contact, "curl": InputHub.curl if human else ai_curl, "tech": tech, "style": style}
+	ai_curl = 0.0
+	_kick_done = false
+	if tech != "bicycle" and tech != "backheel":
+		heading = heading.slerp(face, 0.65).normalized()
 	model.anim_kick_kind = kind
-	model.play("kick")
+	model.play(tech)
 	return true
 
 
@@ -494,7 +542,7 @@ func _execute_kick() -> void:
 			return
 		ball.held_by = null
 		ball.position = global_position + heading * 0.6 + Vector3(0, 1.0 if kind == "throw" else 0.4, 0)
-	elif not ball_close(1.7):
+	elif not _ball_reachable():
 		return  # golpeo al aire
 	var power: float = _kick["power"]
 	var dir: Vector3 = _kick["dir"]
@@ -536,11 +584,37 @@ func _execute_kick() -> void:
 			var r3 := d3.cross(Vector3.UP).normalized()
 			spin = r3 * 22.0 - Vector3.UP * curl * 20.0
 		"shot":
-			var res := _compute_shot(power, dir, true)
-			vel = res[0]
-			spin = res[1] - Vector3.UP * curl * 38.0 * (0.5 + 0.5 * attr("curl"))
+			var style: String = _kick.get("style", "")
+			if style == "chip":
+				vel = _chip_velocity()
+				spin = dir.cross(Vector3.UP).normalized() * 15.0
+			else:
+				var res := _compute_shot(power * (0.8 if style == "finesse" else 1.0), dir, true, 0.6 if style == "finesse" else 1.0)
+				vel = res[0]
+				spin = res[1] - Vector3.UP * curl * 38.0 * (0.5 + 0.5 * attr("curl"))
+				if style == "finesse":
+					# Efecto automático hacia el palo largo
+					var side_curl := signf(ball.global_position.z) if absf(ball.global_position.z) > 1.0 else 1.0
+					spin += Vector3.UP * side_curl * float(team.side) * 22.0 * (0.5 + 0.5 * attr("curl"))
+			stats["shots"] += 1
 			if human:
 				InputHub.vibrate(45)
+	# Ajustes por técnica
+	var tech: String = _kick.get("tech", "kick")
+	match tech:
+		"header":
+			vel = vel.rotated(Vector3.UP, _rng.randfn(0.0, 0.08 * (1.3 - attr("heading")))) * (0.6 + 0.25 * attr("heading"))
+			if kind == "shot":
+				vel.y = minf(vel.y, 1.5) - 1.0
+		"bicycle":
+			vel = vel.rotated(Vector3.UP, _rng.randfn(0.0, 0.12)) * 1.05
+		"volley":
+			vel = vel.rotated(Vector3.UP, _rng.randfn(0.0, 0.05)) * 1.08
+			vel.y += _rng.randfn(0.0, 1.2)
+		"backheel":
+			vel *= 0.7
+	if kind != "shot":
+		stats["passes"] += 1
 	ball.position.y = maxf(ball.position.y, Ball.RADIUS)
 	ball.kick(vel, spin, self)
 	ball.intended_receiver = _kick["receiver"]
@@ -561,8 +635,23 @@ func _ground_velocity_to(point: Vector3, arrive: float) -> Vector3:
 	return flat.normalized() * minf(v0, 30.0)
 
 
+## Globo: parábola alta que cae justo bajo el travesaño.
+func _chip_velocity() -> Vector3:
+	var side: int = team.side
+	var gx := PitchDims.HALF_LENGTH * side
+	var target := Vector3(gx, 0, clampf(ball.global_position.z * 0.3, -2.5, 2.5))
+	var flat := target - ball.global_position
+	flat.y = 0.0
+	var d := flat.length()
+	var theta := deg_to_rad(clampf(30.0 + 300.0 / maxf(d, 5.0), 32.0, 55.0))
+	var s := sqrt(maxf(d, 3.0) * Ball.GRAVITY / sin(2.0 * theta)) * 1.03
+	var err := (0.02 + (1.0 - attr("shot_accuracy")) * 0.06) * error_mult
+	var hd := flat.normalized().rotated(Vector3.UP, _rng.randfn(0.0, err))
+	return hd * s * cos(theta) + Vector3.UP * s * sin(theta) * _rng.randf_range(0.95, 1.03)
+
+
 ## Devuelve [velocidad, giro] de un tiro dirigido a la portería rival.
-func _compute_shot(power: float, dir: Vector3, has_dir: bool) -> Array:
+func _compute_shot(power: float, dir: Vector3, has_dir: bool, sigma_mult := 1.0) -> Array:
 	var side: int = team.side if team != null else 1
 	var gx := PitchDims.HALF_LENGTH * side
 	var from := ball.global_position
@@ -579,7 +668,7 @@ func _compute_shot(power: float, dir: Vector3, has_dir: bool) -> Array:
 	var spd := lerpf(15.0, 31.0, power) * (0.82 + 0.18 * attr("shot_power"))
 	var accuracy := attr("shot_accuracy")
 	var fatigue := 1.0 - stamina
-	var sigma := (0.012 + (1.0 - accuracy) * 0.06 + fatigue * 0.03 + clampf(speed / 9.0, 0.0, 1.0) * 0.02 + pow(power, 3.0) * 0.035) * error_mult
+	var sigma := (0.012 + (1.0 - accuracy) * 0.06 + fatigue * 0.03 + clampf(speed / 9.0, 0.0, 1.0) * 0.02 + pow(power, 3.0) * 0.035) * error_mult * sigma_mult
 	if not assisted:
 		var v0 := dir * spd + Vector3.UP * lerpf(1.0, 6.0, power)
 		return [v0, -dir.cross(Vector3.UP) * 20.0]
@@ -602,30 +691,118 @@ func _compute_shot(power: float, dir: Vector3, has_dir: bool) -> Array:
 
 # ------------------------------------------------------------- Regates
 
+func _opponent_in_front(max_d: float) -> FootballPlayer:
+	if opponents == null:
+		return null
+	for o in opponents.players:
+		var to: Vector3 = o.global_position - global_position
+		to.y = 0.0
+		if to.length() < max_d and heading.dot(to.normalized()) > 0.75:
+			return o
+	return null
+
+
 func request_trick(input: Vector3) -> void:
 	if state != State.MOVE or not has_ball:
 		return
 	var ang := 0.0
 	if input.length() > 0.3:
 		ang = heading.signed_angle_to(input.normalized(), Vector3.UP)
+	var now := Time.get_ticks_msec() / 1000.0
+	var double_tap := now - _feint_time < 0.45
+	_feint_time = now
+	var opp := _opponent_in_front(1.8)
 	_set_state(State.TRICK)
 	_trick_done = false
+	if input.length() > 0.3 and absf(ang) > deg_to_rad(135.0):
+		_trick_kind = "roulette"
+		_trick_side = signf(ang) if ang != 0.0 else 1.0
+		model.play("trick_cut")
+		_emit_trick("trick_roulette")
+		return
+	if opp != null and absf(ang) < deg_to_rad(30.0) and input.length() > 0.3:
+		_trick_kind = "nutmeg"
+		_trick_side = 1.0 if _rng.randf() < 0.5 else -1.0
+		model.play("trick_stepover")
+		_emit_trick("trick_nutmeg")
+		_nutmeg_target = opp
+		return
+	if double_tap:
+		_trick_kind = "feint"
+		_trick_side = 1.0 if _rng.randf() < 0.5 else -1.0
+		model.play("trick_cut")
+		_emit_trick("trick_feint")
+		return
 	if absf(ang) > deg_to_rad(50.0):
 		_trick_kind = "cut"
 		_trick_side = signf(ang)
 		model.play("trick_cut")
-		if human:
-			action_message.emit(Lang.t("trick_cut"))
+		_emit_trick("trick_cut")
 	else:
 		_trick_kind = "stepover"
 		_trick_side = signf(ang) if absf(ang) > 0.1 else (1.0 if _rng.randf() > 0.5 else -1.0)
 		model.play("trick_stepover")
-		if human:
-			action_message.emit(Lang.t("trick_stepover"))
+		_emit_trick("trick_stepover")
+
+
+var _nutmeg_target: FootballPlayer = null
+
+
+func _emit_trick(key: String) -> void:
+	trick_done.emit(self, key)
+	if human:
+		action_message.emit(Lang.t(key))
 
 
 func _trick(dt: float, input: Vector3) -> void:
 	var drib := attr("dribbling")
+	if _trick_kind == "roulette":
+		# Ruleta: giro completo protegiendo el balón y salida hacia el joystick
+		heading = heading.rotated(Vector3.UP, _trick_side * TAU * 0.9 * dt / 0.5).normalized()
+		_brake(dt, 6.0)
+		if state_t > 0.5:
+			if input.length() > 0.3:
+				heading = input.normalized()
+			speed = minf(speed + 2.0 + 2.0 * drib, top_speed(true))
+			_set_state(State.MOVE)
+			if has_ball:
+				ball.velocity = heading * (speed + 1.2)
+				ball.velocity.y = 0.0
+		_touch_timer = 0.3
+		return
+	if _trick_kind == "nutmeg":
+		if not _trick_done and state_t > 0.2:
+			_trick_done = true
+			if has_ball:
+				# El balón pasa entre las piernas del rival; el jugador lo rodea
+				ball.velocity = heading * (7.0 + 3.0 * drib)
+				ball.velocity.y = 0.0
+				ball.claim_block_time = 0.7
+				ball.claim_block_by = _nutmeg_target
+				heading = heading.rotated(Vector3.UP, _trick_side * deg_to_rad(35.0)).normalized()
+				speed = minf(speed + 2.5, top_speed(true))
+				if _nutmeg_target != null and _rng.randf() < 0.4 + drib * 0.4:
+					_nutmeg_target.stumble()
+		if state_t > 0.4:
+			_set_state(State.MOVE)
+		_touch_timer = 0.35
+		return
+	if _trick_kind == "feint":
+		_brake(dt, 3.0)
+		if not _trick_done and state_t > 0.25:
+			_trick_done = true
+			heading = heading.rotated(Vector3.UP, -_trick_side * deg_to_rad(40.0)).normalized()
+			speed = minf(speed + 3.0 * drib, top_speed(true))
+			var o := _opponent_in_front(3.0)
+			if o != null and _rng.randf() < 0.3 + (drib - o.attr("defense")) * 0.8:
+				o.stumble()
+		if state_t > 0.4:
+			_set_state(State.MOVE)
+			if has_ball:
+				ball.velocity = heading * (speed + 1.0)
+				ball.velocity.y = 0.0
+		_touch_timer = 0.3
+		return
 	if _trick_kind == "cut":
 		if not _trick_done:
 			_trick_done = true
@@ -678,11 +855,14 @@ func _slide(dt: float) -> void:
 				carrier.stumble()
 				tackled.emit(self, carrier)
 		elif opponents != null:
-			# Llega tarde: derriba al rival (las faltas se pitan en la Fase 3)
+			# Llega tarde: derriba al rival -> falta
 			for o in opponents.players:
-				if o.has_ball and o.global_position.distance_to(foot) < 0.7:
+				if o.has_ball and o.global_position.distance_to(foot) < 0.75:
 					_slide_hit = true
-					o.stumble()
+					var behind := heading.dot(o.heading) > 0.5
+					var sev := 0.45 + (0.3 if behind else 0.0) + clampf(speed / 9.0, 0.0, 1.0) * 0.2 + randf() * 0.2
+					o.fall()
+					foul_committed.emit(self, o, sev)
 	if state_t > 0.45:
 		_dust.emitting = false
 	if state_t > 1.0:
@@ -717,13 +897,53 @@ func _tackle(dt: float) -> void:
 				ball.kick(away.rotated(Vector3.UP, _rng.randf_range(-0.8, 0.8)) * _rng.randf_range(2.5, 5.0), Vector3.ZERO, self)
 				ball.claim_block_time = 0.0
 				c.stumble()
+				stats["tackles"] += 1
 				tackled.emit(self, c)
 				if Engine.has_meta("debug"):
 					print("    entrada ", name, " roba a ", c.name, " x=%.0f" % (c.position.x * c.team.side))
 			else:
-				stumble(0.35)
+				if c != null and _rng.randf() < 0.22:
+					c.fall()
+					foul_committed.emit(self, c, 0.2 + _rng.randf() * 0.3)
+				else:
+					stumble(0.35)
 	if state_t > 0.4 and state == State.TACKLE:
 		_set_state(State.MOVE)
+
+
+func fall() -> void:
+	if state == State.HOLD or state == State.DIVE:
+		return
+	has_ball = false
+	_set_state(State.LYING)
+	model.play("fall")
+	state_t = -0.9  # tarda más en levantarse
+
+
+func play_anim(anim: String, freeze_t := 0.0) -> void:
+	model.play(anim)
+	if freeze_t > 0.0:
+		_set_state(State.CELEBRATE)
+		model.play(anim)
+
+
+## Carga hombro con hombro sobre el portador.
+func request_charge(c: FootballPlayer) -> void:
+	if state != State.MOVE or tackle_cooldown > 0.0 or c == null:
+		return
+	tackle_cooldown = 1.0
+	model.play("charge")
+	var p := clampf(0.3 + (attr("physical") - c.attr("physical")) * 1.2, 0.05, 0.75)
+	var behind := heading.dot(c.heading) > 0.7 and (global_position - c.global_position).dot(c.heading) < -0.2
+	if behind and _rng.randf() < 0.4:
+		c.fall()
+		foul_committed.emit(self, c, 0.3 + _rng.randf() * 0.2)
+	elif _rng.randf() < p:
+		c.stumble()
+		stats["tackles"] += 1
+		tackled.emit(self, c)
+	else:
+		stumble()
 
 
 func stumble(_t := 0.75) -> void:
@@ -800,11 +1020,13 @@ func _parry(strength: float) -> void:
 	ball.claim_block_time = 0.5
 
 
-func celebrate() -> void:
+func celebrate(kind := "") -> void:
 	charging_action = ""
 	has_ball = false
 	_set_state(State.CELEBRATE)
-	model.play("celebrate")
+	if kind == "":
+		kind = ["celebrate", "airplane", "knee_slide", "jump_punch", "point_sky"][_rng.randi() % 5]
+	model.play(kind)
 
 
 func lament() -> void:

@@ -23,6 +23,12 @@ var vibration: bool = true
 var show_fps: bool = true
 var difficulty: int = 2          # 0 Principiante .. 4 Leyenda
 var half_minutes: float = 4.0    # minutos reales por tiempo
+var commentary: bool = true
+var auto_replay: bool = true
+var save_goal_replays: bool = true
+var commentary_volume: float = 0.9
+var music: bool = true
+var sfx_volume_db: float = 0.0
 var controls_opacity: float = 0.55
 var controls_scale: float = 1.0
 ## Desplazamientos personalizados de cada botón táctil (nombre -> Vector2 en px de referencia).
@@ -99,6 +105,12 @@ func save_settings() -> void:
 	cfg.set_value("game", "wet_pitch", wet_pitch)
 	cfg.set_value("game", "difficulty", difficulty)
 	cfg.set_value("game", "half_minutes", half_minutes)
+	cfg.set_value("audio", "commentary", commentary)
+	cfg.set_value("game", "auto_replay", auto_replay)
+	cfg.set_value("game", "save_goal_replays", save_goal_replays)
+	cfg.set_value("audio", "commentary_volume", commentary_volume)
+	cfg.set_value("audio", "music", music)
+	cfg.set_value("audio", "sfx_volume_db", sfx_volume_db)
 	cfg.set_value("controls", "vibration", vibration)
 	cfg.set_value("controls", "opacity", controls_opacity)
 	cfg.set_value("controls", "scale", controls_scale)
@@ -119,6 +131,12 @@ func load_settings() -> void:
 	wet_pitch = bool(cfg.get_value("game", "wet_pitch", wet_pitch))
 	difficulty = int(cfg.get_value("game", "difficulty", difficulty))
 	half_minutes = float(cfg.get_value("game", "half_minutes", half_minutes))
+	commentary = bool(cfg.get_value("audio", "commentary", commentary))
+	auto_replay = bool(cfg.get_value("game", "auto_replay", auto_replay))
+	save_goal_replays = bool(cfg.get_value("game", "save_goal_replays", save_goal_replays))
+	commentary_volume = float(cfg.get_value("audio", "commentary_volume", commentary_volume))
+	music = bool(cfg.get_value("audio", "music", music))
+	sfx_volume_db = float(cfg.get_value("audio", "sfx_volume_db", sfx_volume_db))
 	vibration = bool(cfg.get_value("controls", "vibration", vibration))
 	controls_opacity = float(cfg.get_value("controls", "opacity", controls_opacity))
 	controls_scale = float(cfg.get_value("controls", "scale", controls_scale))

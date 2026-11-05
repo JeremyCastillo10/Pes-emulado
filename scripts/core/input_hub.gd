@@ -40,6 +40,18 @@ func emit_swipe(dir: Vector2, strength: float) -> void:
 	swipe.emit(dir, strength)
 
 
+## Modo 2 jugadores: los mandos del jugador 1 quedan limitados al mando 0 (el 2 usa el mando 1).
+func set_two_player(on: bool) -> void:
+	for a in InputMap.get_actions():
+		if str(a).begins_with("ui_"):
+			continue
+		for e in InputMap.action_get_events(a):
+			if e is InputEventJoypadButton or e is InputEventJoypadMotion:
+				InputMap.action_erase_event(a, e)
+				e.device = 0 if on else -1
+				InputMap.action_add_event(a, e)
+
+
 func _build_input_map() -> void:
 	_add("move_left", [_key(KEY_A), _key(KEY_LEFT), _axis(JOY_AXIS_LEFT_X, -1.0), _btn(JOY_BUTTON_DPAD_LEFT)])
 	_add("move_right", [_key(KEY_D), _key(KEY_RIGHT), _axis(JOY_AXIS_LEFT_X, 1.0), _btn(JOY_BUTTON_DPAD_RIGHT)])
