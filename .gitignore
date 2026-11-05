@@ -1,0 +1,12 @@
+# Godot
+.godot/
+*.import
+!icon.svg.import
+build/*.apk
+build/*.aab
+build/*.idsig
+*.keystore
+*.jks
+export_credentials.cfg
+android/
+!releases/*.apk
