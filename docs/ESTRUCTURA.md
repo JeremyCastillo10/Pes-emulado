@@ -1,66 +1,63 @@
 # Estructura del proyecto
 
 ```
-project.godot            Configuración del motor (renderizador Mobile, horizontal, autoloads)
-export_presets.cfg       Preset de exportación "Android" (APK)
-icon.svg                 Icono
+project.godot              Configuración (renderizador Mobile, horizontal, autoloads, TTS)
+export_presets.cfg         Preset "Android" (APK, permisos de vibración y almacenamiento)
 data/
-  lang/es.json           Todos los textos de la interfaz (traducción)
-  teams/demo.json        Dos equipos de prueba (la base de datos completa llega en la Fase 4)
-audio/
-  narracion/             (Fase 3) clips de narración intercambiables
+  db/database.json         Base de datos completa (ligas, clubes, selecciones, jugadores)
+  lang/es.json             Textos de la interfaz
+  lang/narracion_es.json   Frases de la narración
+audio/narracion/           Clips de narración opcionales (.ogg)
+audio/sfx/                 Sonidos opcionales que sustituyen a los sintetizados (.ogg)
 scenes/
-  match/match.tscn       Escena principal del partido
-  match/ball.tscn        Balón
-  match/player.tscn      Jugador
-  ui/hud.tscn            HUD + controles táctiles + opciones
+  menu/main_menu.tscn      Escena inicial: menú con estadio 3D
+  menu/replay_viewer.tscn  Visor de repeticiones guardadas
+  match/match.tscn         Partido; ball.tscn, player.tscn
+  ui/hud.tscn              HUD del partido
 scripts/
-  core/                  Autoloads (siempre cargados)
-    game_settings.gd     Ajustes persistentes: calidad (Baja/Media/Alta/Auto), cámara,
-                         hora del día, vibración, opacidad/tamaño/posición de botones
-    input_hub.gd         Mapa de entrada (teclado + mando) y gestos táctiles (swipe, efecto)
-    lang.gd              Lang.t("clave") lee data/lang/<idioma>.json
+  core/                    Autoloads
+    game_settings.gd       Ajustes persistentes (calidad, cámara, controles, audio, dificultad)
+    input_hub.gd           Mapa de entrada (teclado, mandos, 2 jugadores) y gestos táctiles
+    lang.gd                Textos traducibles
+    database.gd            "DB": carga en segundo plano, consultas, edición, importar/exportar
+    game_state.gd          "Game": configuración del partido, cambio de escena, guardado
+    audio_manager.gd       "Audio": síntesis de sonidos/música, público dinámico
   match/
-    pitch_dims.gd        Medidas reglamentarias del campo
-    ball.gd              Física del balón: gravedad, aire, efecto Magnus, botes según
-                         superficie, rodadura, postes, travesaño, red, gol y fuera
-    football_player.gd   Jugador/portero: inercia, sprint, resistencia, conducción, pases,
-                         tiros, regates, entradas, barrida, estiradas; lo mueven
-                         "intenciones" que envían el humano o la IA
-    formations.gd        Formaciones (4-4-2, 4-3-3, 4-2-3-1, 3-5-2, 5-3-2) y afinidad de puestos
-    team.gd              Equipo: alineación, bloque dinámico, asistencia de pase e IA por roles
-    human_controller.gd  Control humano: carga de golpeos, cambio de jugador, presión, gestos
-    player_model.gd      Cuerpo procedural articulado + animación procedural con mezcla
-                         suave entre estados; aspecto personalizable (piel, pelo, barba,
-                         altura, complexión, botines, dorsal y nombre en la espalda)
-    camera_rig.gd        Cámaras Transmisión, Amplia, Cercana y Detrás del jugador
-    stadium_builder.gd   Estadio procedural: césped, porterías y red, vallas, banquillos,
-                         gradas, techo, torres de luz, público animado (MultiMesh), luz
-    match.gd             Orquesta el partido: saques, goles, reloj, tiempos, estadísticas,
-                         choques entre jugadores y pruebas automáticas
-  ui/
-    touch_controls.gd    Joystick flotante, botones contextuales, gestos, modo edición
-    hud.gd               Marcador, reloj, panel del jugador, pausa, opciones y estadísticas
-    radar.gd             Radar del campo
-    ui_theme.gd          Identidad visual (azul oscuro, blanco y amarillo)
-shaders/
-  pitch.gdshader         Césped con 5 patrones de corte, desgaste y líneas antialias
-  net.gdshader           Red que se deforma con el impacto del balón
-  crowd.gdshader         Público con siluetas, color por persona y animación por emoción
-  ball.gdshader          Paneles del balón
-  blob_shadow.gdshader   Sombra barata para calidad Baja/Media
-tools/                   Scripts auxiliares (generar datos de prueba)
-docs/                    Documentación
-build/                   Salida de exportación (no se sube el .apk de build/)
-releases/                APK entregado al cerrar cada fase
+    match.gd               Orquestador y reglamento del partido, estadísticas y resultado
+    team.gd                Equipo: bloque, asistencia de pase, IA por roles, cambios, estrategias
+    football_player.gd     Jugador: movimiento con inercia, golpeos, regates, entradas, portero
+    player_model.gd        Esqueleto + malla procedural y animación procedural
+    human_controller.gd    Control humano (táctil, teclado, mando concreto, Leyenda)
+    ball.gd                Física del balón
+    stadium_builder.gd     Estadio procedural (construcción por partes)
+    camera_rig.gd          Cámaras y cámaras cinemáticas (presentación, repetición)
+    commentary.gd          Narración TTS / clips
+    replay.gd              Grabación, cámara lenta y guardado de repeticiones
+    referee.gd             Árbitro
+    weather.gd             Lluvia
+    training.gd            Modos de entrenamiento
+    formations.gd          Formaciones y afinidad de puestos
+    pitch_dims.gd          Medidas del campo
+  modes/
+    competition.gd         Ligas, copas, grupos, torneo de selecciones, simulación
+    mode_flow.gd           Aplica resultados al modo activo
+    master_league.gd       Liga Máster
+    legend_mode.gd         Ser una Leyenda
+  menu/                    Pantallas del menú (principal, amistoso, competiciones, Liga Máster,
+                           Leyenda, entrenamiento, editor, alineación, selector de equipos,
+                           repeticiones, opciones)
+  ui/                      HUD, controles táctiles, radar, tema visual, escudos, fichas
+shaders/                   Césped, red, público, balón, sombra, desenfoque de repetición
+tools/                     Generadores: base de datos, frases de narración
+tests/                     Pruebas automáticas (modos, flujo menú-partido, capturas)
+releases/                  APK final
 ```
 
-## Convenciones
+## Pruebas automáticas
 
-- Eje **X** = largo del campo (porterías en x = ±52,5 m), eje **Z** = ancho, **Y** = altura.
-  Todo en metros y segundos.
-- Los modelos miran hacia **-Z** local.
-- Las acciones de juego se leen siempre con `Input` (`act_pass`, `act_shoot`…); los botones
-  táctiles las pulsan con `Input.action_press`, así táctil, teclado y mando funcionan igual.
-- Ningún texto visible va fijo en el código: se usa `Lang.t("clave")`.
-- No hay assets externos con copyright: geometría, texturas y efectos son procedurales.
+```bash
+godot --headless --fixed-fps 60 --path . res://scenes/match/match.tscn -- --autotest          # partido IA vs IA
+godot --headless --fixed-fps 60 --path . res://scenes/match/match.tscn -- --autotest --humantest
+godot --headless --path . res://tests/test_modes.tscn                     # ligas, copas, ML, Leyenda, menús
+godot --headless --fixed-fps 60 --path . res://tests/test_flow.tscn       # menú -> partido -> menú
+```

@@ -83,13 +83,12 @@ godot --headless --path . --export-release "Android" build/GolazoPro3D.apk
 - *El APK pesa mucho*: desmarca `armeabi-v7a` en el preset si tu teléfono es de 64 bits
   (casi todos desde 2017); el APK baja a la mitad.
 
-## Comprobación automática (para desarrollo)
+## Permisos
 
-```bash
-# Partido IA contra IA sin pantalla (2 minutos reales por tiempo); imprime goles y estadísticas
-godot --headless --fixed-fps 60 --path . -- --autotest
-# Igual, con tiempos de 10 minutos
-godot --headless --fixed-fps 60 --path . -- --autotest --half=10
-# Simula entradas de un jugador humano (pases, presión, tiro, cambio de jugador)
-godot --headless --fixed-fps 60 --path . -- --humantest
-```
+El APK pide vibración y almacenamiento. El almacenamiento solo se usa para importar/exportar la
+base de datos en `Documentos/GolazoPro`. En Android 11 o superior, si al exportar falla, ve a
+Ajustes → Aplicaciones → Golazo Pro 3D → Permisos → Archivos y permite "acceso a todos los archivos".
+
+## Comprobación automática
+
+Ver `docs/ESTRUCTURA.md` (sección Pruebas automáticas).

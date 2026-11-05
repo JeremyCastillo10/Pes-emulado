@@ -5,7 +5,7 @@ config_version=5
 
 config/name="Golazo Pro 3D"
 config/description="Juego de fútbol 3D original para Android (uso personal)."
-config/version="0.2.0"
+config/version="1.0.0"
 run/main_scene="res://scenes/menu/main_menu.tscn"
 config/features=PackedStringArray("4.3", "Mobile")
 config/icon="res://icon.svg"

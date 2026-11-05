@@ -14,14 +14,14 @@ func _init(p_title := "") -> void:
 
 
 func _ready() -> void:
-	set_anchors_preset(Control.PRESET_FULL_RECT)
+	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	var bg := ColorRect.new()
 	bg.color = Color(0.01, 0.03, 0.09, 0.55)
-	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
+	bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(bg)
 	var margin := MarginContainer.new()
-	margin.set_anchors_preset(Control.PRESET_FULL_RECT)
+	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	for s in ["left", "right"]:
 		margin.add_theme_constant_override("margin_" + s, 34)
 	margin.add_theme_constant_override("margin_top", 18)
@@ -90,6 +90,7 @@ func big_button(text: String, cb: Callable, parent: Control = null, width := 520
 	b.custom_minimum_size = Vector2(width, 62)
 	b.alignment = HORIZONTAL_ALIGNMENT_LEFT
 	b.add_theme_font_size_override("font_size", 24)
+	b.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	b.focus_mode = Control.FOCUS_ALL
 	b.pressed.connect(func() -> void:
 		Audio.ui("select")
@@ -102,6 +103,7 @@ func button(text: String, cb: Callable, parent: Control = null, w := 170.0) -> B
 	var b := Button.new()
 	b.text = text
 	b.custom_minimum_size = Vector2(w, 52)
+	b.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	b.focus_mode = Control.FOCUS_ALL
 	b.pressed.connect(func() -> void:
 		Audio.ui("click")
@@ -115,7 +117,9 @@ func label(text: String, size := 20, parent: Control = null, color := UITheme.WH
 	l.text = text
 	l.add_theme_font_size_override("font_size", size)
 	l.add_theme_color_override("font_color", color)
-	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	if parent == null:
+		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	(parent if parent else content).add_child(l)
 	return l
 
@@ -231,7 +235,7 @@ func team_row(team_id: String, cb: Callable, parent: Control = null, extra := ""
 		Audio.ui("select")
 		cb.call())
 	var h := HBoxContainer.new()
-	h.set_anchors_preset(Control.PRESET_FULL_RECT)
+	h.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	h.offset_left = 10
 	h.add_theme_constant_override("separation", 14)
 	h.mouse_filter = Control.MOUSE_FILTER_IGNORE

@@ -66,7 +66,7 @@ func _ready() -> void:
 	var layer := CanvasLayer.new()
 	add_child(layer)
 	var ui := Control.new()
-	ui.set_anchors_preset(Control.PRESET_FULL_RECT)
+	ui.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	ui.theme = UITheme.build()
 	layer.add_child(ui)
 	_lbl = Label.new()

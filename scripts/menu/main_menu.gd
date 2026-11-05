@@ -35,12 +35,12 @@ func _ready() -> void:
 	protagonist.detail = 2
 	add_child(protagonist)
 	protagonist.build_model()
-	protagonist.position = Vector3(0, 0, PitchDims.HALF_WIDTH + 6.0)
+	protagonist.position = Vector3(-2.2, 0, PitchDims.HALF_WIDTH + 1.8)
 	protagonist.rotation_degrees.y = 0.0
 	var layer := CanvasLayer.new()
 	add_child(layer)
 	ui = Control.new()
-	ui.set_anchors_preset(Control.PRESET_FULL_RECT)
+	ui.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	ui.theme = UITheme.build()
 	layer.add_child(ui)
 	_toast = Label.new()
@@ -87,8 +87,8 @@ func _process(delta: float) -> void:
 	_t += delta
 	# Cámara detrás del protagonista mirando al campo iluminado, con un vaivén suave
 	var sway := sin(_t * 0.18)
-	cam.global_position = Vector3(1.4 + sway * 1.2, 1.75 + sin(_t * 0.3) * 0.08, PitchDims.HALF_WIDTH + 9.5)
-	cam.look_at(Vector3(sway * 4.0, 2.2, 0), Vector3.UP)
+	cam.global_position = Vector3(-4.0 + sway * 0.5, 1.75 + sin(_t * 0.3) * 0.05, PitchDims.HALF_WIDTH + 5.3)
+	cam.look_at(Vector3(2.0 + sway * 3.0, 1.8, 0), Vector3.UP)
 	protagonist.anim_speed = 0.0
 	protagonist.rotation.y = sin(_t * 0.25) * 0.08
 

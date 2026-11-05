@@ -29,12 +29,12 @@ func _ready() -> void:
 	add_child(_fade)
 	_fade_rect = ColorRect.new()
 	_fade_rect.color = Color(UITheme.NAVY, 1.0)
-	_fade_rect.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_fade_rect.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_fade_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_fade_rect.modulate.a = 0.0
 	_fade.add_child(_fade_rect)
 	_fade_label = Label.new()
-	_fade_label.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_fade_label.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_fade_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_fade_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	_fade_label.add_theme_font_size_override("font_size", 54)

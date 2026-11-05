@@ -1385,7 +1385,35 @@ func pause_replay() -> void:
 		hud.show_replay(true)
 
 
+var _ht := 0.0
+var _ht_step := 0
+const HUMAN_TEST := [[0.5, "press", "act_pass"], [0.7, "release", "act_pass"], [2.0, "press", "move_right"],
+	[3.0, "press", "act_sprint"], [5.0, "press", "act_pass"], [5.3, "release", "act_pass"],
+	[7.0, "press", "act_trick"], [7.1, "release", "act_trick"], [8.0, "press", "act_lob"], [8.6, "release", "act_lob"],
+	[10.0, "press", "act_pass"], [14.0, "release", "act_pass"], [14.5, "press", "act_shoot"], [14.6, "release", "act_shoot"],
+	[16.0, "press", "act_shoot"], [16.7, "release", "act_shoot"], [20.0, "quit", ""]]
+
+
+## Prueba automática de control humano (-- --autotest --humantest).
+func _human_test(delta: float) -> void:
+	_ht += delta
+	while _ht_step < HUMAN_TEST.size() and _ht >= float(HUMAN_TEST[_ht_step][0]):
+		var ev: Array = HUMAN_TEST[_ht_step]
+		_ht_step += 1
+		match ev[1]:
+			"press": Input.action_press(ev[2])
+			"release": Input.action_release(ev[2])
+			"quit":
+				print("ESTADÍSTICAS ", stats)
+				get_tree().quit()
+	if int(_ht * 2.0) != int((_ht - delta) * 2.0) and human:
+		var c := human.team.controlled
+		print("t=%.1f fase=%d control=%s balón_de=%s estado=%d" % [_ht, phase, c.name if c else "-", ball.owner_player.name if ball.owner_player else "-", c.state if c else -1])
+
+
 func _process(delta: float) -> void:
+	if _autotest and "--humantest" in OS.get_cmdline_user_args() and phase != Phase.LOADING:
+		_human_test(delta)
 	if _shots_dir != "":
 		_shots(delta)
 	if _autotest and _autotest_quit > 0.0 and clock / 60.0 >= _autotest_quit:

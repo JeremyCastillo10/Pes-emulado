@@ -318,9 +318,26 @@ func play(state: String) -> void:
 	anim_state = state
 
 
+var _lod_acc := 0.0
+var _lod_frame := 0
+
+
 func _process(delta: float) -> void:
 	if skel == null:
 		return
+	# LOD de animación: los jugadores lejanos se actualizan con menos frecuencia
+	_lod_frame += 1
+	_lod_acc += delta
+	var cam := get_viewport().get_camera_3d()
+	if cam != null:
+		var d := cam.global_position.distance_to(global_position)
+		var every := 1 if d < 38.0 else (2 if d < 70.0 else 3)
+		if GameSettings.quality == GameSettings.Quality.LOW:
+			every += 1
+		if _lod_frame % every != 0:
+			return
+	delta = _lod_acc
+	_lod_acc = 0.0
 	anim_t += delta
 	anim_touch = maxf(anim_touch - delta, 0.0)
 	var target := _target_pose(delta)

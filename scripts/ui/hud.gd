@@ -42,7 +42,7 @@ var _sub_out: FootballPlayer = null
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	_root = Control.new()
-	_root.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_root.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_root.theme = UITheme.build()
 	add_child(_root)
@@ -87,7 +87,7 @@ func _ready() -> void:
 
 func _build_overlays() -> void:
 	_replay_rect = ColorRect.new()
-	_replay_rect.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_replay_rect.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_replay_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var sm := ShaderMaterial.new()
 	sm.shader = load("res://shaders/replay_blur.gdshader")
@@ -120,7 +120,7 @@ func _build_overlays() -> void:
 	_shootout_lbl.visible = false
 	_root.add_child(_shootout_lbl)
 	_loading = PanelContainer.new()
-	_loading.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_loading.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	var sb := StyleBoxFlat.new()
 	sb.bg_color = UITheme.NAVY
 	_loading.add_theme_stylebox_override("panel", sb)
@@ -464,7 +464,7 @@ func _build_pause() -> void:
 
 func _overlay() -> PanelContainer:
 	var p := PanelContainer.new()
-	p.set_anchors_preset(Control.PRESET_FULL_RECT)
+	p.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	var sb := StyleBoxFlat.new()
 	sb.bg_color = Color(0.01, 0.03, 0.08, 0.86)
 	p.add_theme_stylebox_override("panel", sb)
