@@ -125,6 +125,8 @@ func match_team(id: String, lineup_override: Array = [], formation_override := "
 		t["lineup"] = lineup_override
 	if formation_override != "":
 		t["formation"] = formation_override
+	if str(t.get("formation", "")).begins_with("custom") and t.has("custom_slots"):
+		Formations.register_custom(t["formation"], t["custom_slots"])
 	return t
 
 

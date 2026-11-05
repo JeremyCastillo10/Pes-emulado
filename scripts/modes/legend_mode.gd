@@ -104,7 +104,7 @@ static func on_match(s: Dictionary, result: Dictionary) -> void:
 	s["goals"] = int(s["goals"]) + g
 	s["assists"] = int(s["assists"]) + a
 	s["ratings"].append(r)
-	s["xp"] = int(s["xp"]) + int((r - 5.0) * 22.0) + g * 30 + a * 18
+	s["xp"] = int(s["xp"]) + int((r - 5.0) * 12.0) + g * 15 + a * 10
 	var ups := 0
 	while int(s["xp"]) >= 100:
 		s["xp"] = int(s["xp"]) - 100

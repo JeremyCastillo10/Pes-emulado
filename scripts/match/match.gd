@@ -532,7 +532,8 @@ func _on_ball_kicked(by: Node, spd: float) -> void:
 			for p in t.players:
 				if p.state == FootballPlayer.State.FROZEN:
 					p.freeze(false)
-				p.remove_meta("wall") if p.has_meta("wall") else null
+				if p.has_meta("wall"):
+					p.remove_meta("wall")
 		restart_taker = null
 	elif phase == Phase.PENALTY:
 		_set_phase(Phase.PLAYING)

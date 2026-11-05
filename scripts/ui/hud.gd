@@ -206,7 +206,7 @@ func refresh_shootout(so: Dictionary) -> void:
 	var marks := ["", ""]
 	for i in 2:
 		for k in so["kicks"][i]:
-			marks[i] += "● " if k else "○ "
+			marks[i] += "O " if k else "X "
 	_shootout_lbl.text = "%s  %s|  %s  %s" % [match_node.teams[0].info.get("short", ""), marks[0], marks[1], match_node.teams[1].info.get("short", "")]
 
 
@@ -269,7 +269,7 @@ func _open_strategy() -> void:
 	if t != null:
 		for key in Team.STRATEGIES.keys():
 			var k: String = key
-			var b := _menu_button(("▶ " if t.strategy == k else "   ") + Lang.t("strat_" + k), func() -> void:
+			var b := _menu_button(("> " if t.strategy == k else "   ") + Lang.t("strat_" + k), func() -> void:
 				t.strategy = k
 				_open_strategy())
 			_strat_box.add_child(b)

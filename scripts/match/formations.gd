@@ -29,8 +29,18 @@ const SIMILAR := {
 }
 
 
+## Formaciones personalizadas registradas en tiempo de ejecución (nombre -> casillas).
+static var custom: Dictionary = {}
+
+
 static func slots(name: String) -> Array:
+	if custom.has(name):
+		return custom[name]
 	return DATA.get(name, DATA["4-3-3"])
+
+
+static func register_custom(name: String, s: Array) -> void:
+	custom[name] = s
 
 
 static func names() -> Array:
