@@ -86,6 +86,10 @@ godot --headless --path . --export-release "Android" build/GolazoPro3D.apk
 ## Comprobación automática (para desarrollo)
 
 ```bash
-# Simula una partida sin pantalla: conduce, regatea, tira, pase largo y barrida
-godot --headless --path . -- --autotest
+# Partido IA contra IA sin pantalla (2 minutos reales por tiempo); imprime goles y estadísticas
+godot --headless --fixed-fps 60 --path . -- --autotest
+# Igual, con tiempos de 10 minutos
+godot --headless --fixed-fps 60 --path . -- --autotest --half=10
+# Simula entradas de un jugador humano (pases, presión, tiro, cambio de jugador)
+godot --headless --fixed-fps 60 --path . -- --humantest
 ```

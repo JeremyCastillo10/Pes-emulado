@@ -240,13 +240,20 @@ func _draw() -> void:
 		var c := button_center(i)
 		var r2 := button_radius(i)
 		var pressed := _held.values().has(i)
-		var base_col := Color(0.08, 0.1, 0.16, alpha * (0.85 if pressed else 0.55))
+		var base_col := Color(UITheme.NAVY, alpha * (0.9 if pressed else 0.55))
+		var ring := Color(1, 1, 1, alpha * 0.75)
 		if b["name"] == "shoot":
-			base_col = Color(0.55, 0.08, 0.08, alpha * (0.95 if pressed else 0.65))
+			ring = Color(1.0, 0.45, 0.2, alpha + 0.2)
 		elif b["name"] == "sprint":
-			base_col = Color(0.08, 0.35, 0.12, alpha * (0.95 if pressed else 0.6))
+			ring = Color(0.3, 0.95, 0.5, alpha + 0.2)
+		elif b["name"] == "through":
+			ring = Color(UITheme.YELLOW, alpha + 0.2)
+		elif b["name"] == "pass":
+			ring = Color(0.35, 0.7, 1.0, alpha + 0.2)
+		if pressed:
+			ring = Color(UITheme.YELLOW, 1.0)
 		draw_circle(c, r2, base_col)
-		draw_arc(c, r2, 0, TAU, 40, Color(1, 1, 1, alpha * (1.0 if pressed else 0.7)), 2.5 if not editing else 4.0, true)
+		draw_arc(c, r2, 0, TAU, 40, ring, 3.0 if not editing else 5.0, true)
 		var label := Lang.t(b["on"] if _has_ball else b["off"])
 		var tw := _font.get_string_size(label, HORIZONTAL_ALIGNMENT_CENTER, -1, fs).x
 		draw_string(_font, c + Vector2(-tw * 0.5, fs * 0.35), label, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Color(1, 1, 1, minf(1.0, alpha + 0.35)))

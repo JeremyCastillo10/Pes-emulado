@@ -6,7 +6,7 @@ export_presets.cfg       Preset de exportación "Android" (APK)
 icon.svg                 Icono
 data/
   lang/es.json           Todos los textos de la interfaz (traducción)
-  (Fase 4: equipos, jugadores, ligas, estadios en JSON)
+  teams/demo.json        Dos equipos de prueba (la base de datos completa llega en la Fase 4)
 audio/
   narracion/             (Fase 3) clips de narración intercambiables
 scenes/
@@ -24,24 +24,32 @@ scripts/
     pitch_dims.gd        Medidas reglamentarias del campo
     ball.gd              Física del balón: gravedad, aire, efecto Magnus, botes según
                          superficie, rodadura, postes, travesaño, red, gol y fuera
-    football_player.gd   Jugador: inercia, sprint, resistencia, conducción, pases, tiros,
-                         regates, barrida; todo depende de las valoraciones (0-99)
+    football_player.gd   Jugador/portero: inercia, sprint, resistencia, conducción, pases,
+                         tiros, regates, entradas, barrida, estiradas; lo mueven
+                         "intenciones" que envían el humano o la IA
+    formations.gd        Formaciones (4-4-2, 4-3-3, 4-2-3-1, 3-5-2, 5-3-2) y afinidad de puestos
+    team.gd              Equipo: alineación, bloque dinámico, asistencia de pase e IA por roles
+    human_controller.gd  Control humano: carga de golpeos, cambio de jugador, presión, gestos
     player_model.gd      Cuerpo procedural articulado + animación procedural con mezcla
                          suave entre estados; aspecto personalizable (piel, pelo, barba,
                          altura, complexión, botines, dorsal y nombre en la espalda)
     camera_rig.gd        Cámaras Transmisión, Amplia, Cercana y Detrás del jugador
     stadium_builder.gd   Estadio procedural: césped, porterías y red, vallas, banquillos,
                          gradas, techo, torres de luz, público animado (MultiMesh), luz
-    match.gd             Orquesta el partido (en Fase 1: práctica libre)
+    match.gd             Orquesta el partido: saques, goles, reloj, tiempos, estadísticas,
+                         choques entre jugadores y pruebas automáticas
   ui/
     touch_controls.gd    Joystick flotante, botones contextuales, gestos, modo edición
-    hud.gd               Marcador/HUD, mensajes, barras de potencia y resistencia, opciones
+    hud.gd               Marcador, reloj, panel del jugador, pausa, opciones y estadísticas
+    radar.gd             Radar del campo
+    ui_theme.gd          Identidad visual (azul oscuro, blanco y amarillo)
 shaders/
   pitch.gdshader         Césped con 5 patrones de corte, desgaste y líneas antialias
   net.gdshader           Red que se deforma con el impacto del balón
   crowd.gdshader         Público con siluetas, color por persona y animación por emoción
   ball.gdshader          Paneles del balón
   blob_shadow.gdshader   Sombra barata para calidad Baja/Media
+tools/                   Scripts auxiliares (generar datos de prueba)
 docs/                    Documentación
 build/                   Salida de exportación (no se sube el .apk de build/)
 releases/                APK entregado al cerrar cada fase

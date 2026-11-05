@@ -27,6 +27,9 @@ var in_goal := 0                  # 0 en juego, ±1 dentro de una portería
 var dead := false                 # balón parado (fuera / gol)
 var claim_block_time := 0.0       # tiempo en que el último pateador no puede recuperarla
 var claim_block_by: Node = null
+var held_by: Node = null          # portero que la tiene en las manos
+var intended_receiver: Node = null # destinatario del último pase
+var shot_by: Node = null          # autor del último tiro (estadísticas)
 
 var _mesh: Node3D
 var _shadow: MeshInstance3D
@@ -79,6 +82,8 @@ func kick(vel: Vector3, spin_vec: Vector3, by: Node) -> void:
 	velocity = vel
 	spin = spin_vec
 	owner_player = null
+	held_by = null
+	dead = false
 	last_touch = by
 	claim_block_time = 0.25
 	claim_block_by = by
@@ -90,12 +95,15 @@ func place(pos: Vector3) -> void:
 	velocity = Vector3.ZERO
 	spin = Vector3.ZERO
 	owner_player = null
+	held_by = null
+	intended_receiver = null
+	shot_by = null
 	in_goal = 0
 	dead = false
 
 
 func can_be_claimed_by(p: Node) -> bool:
-	if dead or in_goal != 0:
+	if dead or in_goal != 0 or held_by != null:
 		return false
 	if claim_block_time > 0.0 and p == claim_block_by:
 		return false
@@ -104,9 +112,17 @@ func can_be_claimed_by(p: Node) -> bool:
 
 func _physics_process(delta: float) -> void:
 	claim_block_time = maxf(claim_block_time - delta, 0.0)
-	var dt := delta / SUBSTEPS
-	for i in SUBSTEPS:
-		_step(dt)
+	# Coherencia: si el "dueño" ya no conduce el balón, queda suelto
+	if owner_player != null and not owner_player.get("has_ball"):
+		owner_player = null
+	if held_by != null:
+		position = held_by.hand_position()
+		velocity = Vector3.ZERO
+		spin = Vector3.ZERO
+	else:
+		var dt := delta / SUBSTEPS
+		for i in SUBSTEPS:
+			_step(dt)
 	# Rotación visual a partir del giro
 	var w := spin.length()
 	if w > 0.01:

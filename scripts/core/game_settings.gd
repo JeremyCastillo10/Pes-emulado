@@ -21,6 +21,8 @@ var time_of_day: int = TimeOfDay.DAY
 var wet_pitch: bool = false
 var vibration: bool = true
 var show_fps: bool = true
+var difficulty: int = 2          # 0 Principiante .. 4 Leyenda
+var half_minutes: float = 4.0    # minutos reales por tiempo
 var controls_opacity: float = 0.55
 var controls_scale: float = 1.0
 ## Desplazamientos personalizados de cada botón táctil (nombre -> Vector2 en px de referencia).
@@ -95,6 +97,8 @@ func save_settings() -> void:
 	cfg.set_value("game", "camera_mode", camera_mode)
 	cfg.set_value("game", "time_of_day", time_of_day)
 	cfg.set_value("game", "wet_pitch", wet_pitch)
+	cfg.set_value("game", "difficulty", difficulty)
+	cfg.set_value("game", "half_minutes", half_minutes)
 	cfg.set_value("controls", "vibration", vibration)
 	cfg.set_value("controls", "opacity", controls_opacity)
 	cfg.set_value("controls", "scale", controls_scale)
@@ -113,6 +117,8 @@ func load_settings() -> void:
 	camera_mode = int(cfg.get_value("game", "camera_mode", camera_mode))
 	time_of_day = int(cfg.get_value("game", "time_of_day", time_of_day))
 	wet_pitch = bool(cfg.get_value("game", "wet_pitch", wet_pitch))
+	difficulty = int(cfg.get_value("game", "difficulty", difficulty))
+	half_minutes = float(cfg.get_value("game", "half_minutes", half_minutes))
 	vibration = bool(cfg.get_value("controls", "vibration", vibration))
 	controls_opacity = float(cfg.get_value("controls", "opacity", controls_opacity))
 	controls_scale = float(cfg.get_value("controls", "scale", controls_scale))
