@@ -1,11 +1,11 @@
 import { ESCENARIOS } from "./content.js";
-import { generarCasoLocal, validarCaso, preguntasLocales, contarVotos, puntuar, opcionesEvento, shuffle, pick } from "./engine.js";
-import { MODELOS, MODELO_POR_DEFECTO, ErrorIA, probarConexion, generarCasoIA, preguntasIA, veredictoIA } from "./ai.js";
+import { generarCasoLocal, armarCasoIA, preguntasLocales, contarVotos, puntuar, opcionesEvento, shuffle, pick } from "./engine.js";
+import { MODELOS, MODELO_POR_DEFECTO, ErrorIA, probarConexion, listarModelos, generarCasoIA, preguntasIA, veredictoIA } from "./ai.js";
 
 // ---------- Estado ----------
 const CLAVE = "coartada.v1";
 const MIN_J = 3, MAX_J = 10;
-let S = { cfg: { apiKey: "", modelo: MODELO_POR_DEFECTO }, nombres: ["", "", ""], prefs: { casos: 3, preguntas: 2, modo: "clasico", escenario: "azar", ambientacion: "", tono: "absurdo", reloj: true }, partida: null };
+let S = { cfg: { apiKey: "", modelo: MODELO_POR_DEFECTO, modelos: [] }, nombres: ["", "", ""], prefs: { casos: 3, preguntas: 2, modo: "clasico", escenario: "azar", ambientacion: "", tono: "absurdo", reloj: true }, partida: null };
 let pantalla = "inicio";
 let ui = {}; // estado efímero de la pantalla actual
 let veredictoPendiente = null; // promesa en curso del veredicto IA
@@ -80,11 +80,11 @@ async function prepararCaso() {
   if (p.modo === "ia") {
     ir("cargando", { titulo: "El detective abre un nuevo expediente", frases: ["Revisando la escena…", "Entrevistando al portero…", "Fabricando coartadas…", "Escondiendo las pruebas…"] });
     try {
-      const caso = await generarCasoIA({ apiKey: S.cfg.apiKey, modelo: S.cfg.modelo, jugadores: p.jugadores, culpable, ambientacion: p.ambientacion, tono: p.tono, titulosUsados: p.usados });
-      R().caso = validarCaso(caso, p.jugadores, culpable);
+      const material = await generarCasoIA({ apiKey: S.cfg.apiKey, modelo: S.cfg.modelo, jugadores: p.jugadores, culpable, ambientacion: p.ambientacion, tono: p.tono, titulosUsados: p.usados });
+      R().caso = armarCasoIA({ jugadores: p.jugadores, culpable, material });
       R().origen = "ia";
     } catch (e) {
-      toast((e instanceof ErrorIA ? e.message : "La IA falló.") + " Se usa un caso del archivo.");
+      toast((e instanceof ErrorIA ? e.message : "El caso de la IA salió defectuoso.") + " Se usa un caso del archivo.");
     }
   }
   if (!R().caso) R().caso = generarCasoLocal({ jugadores: p.jugadores, culpable, escenarioId: p.escenario, usados: p.usados });
@@ -198,29 +198,33 @@ V.reglas = () => `
     <p>Con una clave de API, la IA inventa el caso a la medida del grupo, lee lo que responden, hace preguntas que cruzan las versiones y al final acusa a alguien. Sin clave, el juego funciona completo con casos del archivo.</p>
   </article>`;
 
-V.ajustes = () => `
+V.ajustes = () => {
+  const lista = (S.cfg.modelos && S.cfg.modelos.length ? S.cfg.modelos : MODELOS).slice();
+  if (!lista.some((m) => m.id === S.cfg.modelo)) lista.unshift({ id: S.cfg.modelo, nombre: S.cfg.modelo });
+  return `
   ${cabecera("Ajustes")}
   <article class="papel">
     <h3>Detective IA</h3>
-    <p class="chico">Pega tu clave de la API de Anthropic. Se guarda solo en este teléfono y se usa únicamente para hablar con la IA. Cada caso cuesta unos centavos de dólar que se cobran a tu cuenta.</p>
-    <label class="campo"><span>Clave de API</span>
-      <input id="apiKey" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="sk-ant-…" value="${esc(S.cfg.apiKey)}">
+    <p class="chico">Pega tu clave de la API de Groq. Se guarda solo en este teléfono y se usa únicamente para hablar con la IA. El uso se descuenta de tu cuenta de Groq.</p>
+    <label class="campo"><span>Clave de API de Groq</span>
+      <input id="apiKey" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="gsk_…" value="${esc(S.cfg.apiKey)}">
     </label>
     <label class="campo"><span>Modelo</span>
-      <select id="modelo">${MODELOS.map((m) => `<option value="${m.id}" ${S.cfg.modelo === m.id ? "selected" : ""}>${esc(m.nombre)}</option>`).join("")}</select>
+      <select id="modelo">${lista.map((m) => `<option value="${esc(m.id)}" ${S.cfg.modelo === m.id ? "selected" : ""}>${esc(m.nombre)}</option>`).join("")}</select>
     </label>
     <div class="fila">
       <button class="btn btn-rojo" data-a="guardarAjustes">Guardar</button>
       <button class="btn btn-linea" data-a="probar">Probar conexión</button>
     </div>
     <p id="pruebaRes" class="chico"></p>
-    <p class="chico">La clave se crea en la consola de Anthropic (platform.claude.com), sección «API keys».</p>
+    <p class="chico">La clave se crea en console.groq.com, sección «API Keys». Al probar la conexión se carga la lista de modelos de tu cuenta.</p>
   </article>
   <article class="papel">
     <h3>Partida guardada</h3>
     <p class="chico">Si cierras la app, la partida sigue donde la dejaste.</p>
     <button class="btn btn-linea" data-a="borrarPartida" ${S.partida ? "" : "disabled"}>Borrar partida en curso</button>
   </article>`;
+};
 
 V.config = () => {
   const n = S.nombres.length, pr = S.prefs, hayClave = !!S.cfg.apiKey;
@@ -569,7 +573,7 @@ const A = {
   quitar: (d) => { leerConfig(); S.nombres.splice(+d.i, 1); ir("config"); },
   modo: (d) => {
     leerConfig();
-    if (d.v === "ia" && !S.cfg.apiKey) return modal(`<h3>Falta la clave</h3><p>El Detective IA necesita una clave de API de Anthropic. Se configura una sola vez.</p><div class="fila"><button class="btn btn-linea" data-a="cerrarModal">Ahora no</button><button class="btn btn-rojo" data-a="irAjustes">Ir a Ajustes</button></div>`);
+    if (d.v === "ia" && !S.cfg.apiKey) return modal(`<h3>Falta la clave</h3><p>El Detective IA necesita una clave de API de Groq. Se configura una sola vez.</p><div class="fila"><button class="btn btn-linea" data-a="cerrarModal">Ahora no</button><button class="btn btn-rojo" data-a="irAjustes">Ir a Ajustes</button></div>`);
     S.prefs.modo = d.v; ir("config");
   },
   irAjustes: () => { cerrarModal(); ir("ajustes"); },
@@ -589,9 +593,15 @@ const A = {
   guardarAjustes: () => { S.cfg.apiKey = $("#apiKey").value.trim(); S.cfg.modelo = $("#modelo").value; guardar(); toast("Ajustes guardados."); },
   probar: async () => {
     A.guardarAjustes();
-    const out = $("#pruebaRes"); out.textContent = "Llamando al detective…";
-    try { const s = await probarConexion({ apiKey: S.cfg.apiKey, modelo: S.cfg.modelo }); if (out.isConnected) out.textContent = "Conectado. El detective dice: «" + s + "»"; }
-    catch (e) { if (out.isConnected) out.textContent = "No funcionó: " + e.message; }
+    $("#pruebaRes").textContent = "Llamando al detective…";
+    let msg;
+    try {
+      const modelos = await listarModelos({ apiKey: S.cfg.apiKey });
+      if (modelos.length) { S.cfg.modelos = modelos; if (!modelos.some((m) => m.id === S.cfg.modelo)) S.cfg.modelo = modelos[0].id; guardar(); }
+      const s = await probarConexion({ apiKey: S.cfg.apiKey, modelo: S.cfg.modelo });
+      msg = "Conectado. El detective dice: «" + s + "»";
+    } catch (e) { msg = "No funcionó: " + e.message; }
+    if (pantalla === "ajustes") { pintar(); $("#pruebaRes").textContent = msg; }
   },
   borrarPartida: () => { S.partida = null; ir("ajustes"); toast("Partida borrada."); },
   salir: () => modal(`<h3>¿Salir del caso?</h3><p>La partida queda guardada y puedes continuarla desde el inicio.</p><div class="fila"><button class="btn btn-linea" data-a="cerrarModal">Seguir jugando</button><button class="btn btn-rojo" data-a="salirSi">Salir</button></div>`),

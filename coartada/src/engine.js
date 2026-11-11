@@ -25,42 +25,25 @@ const contraer = (s) => s.replace(/\b([Dd])e el\b/g, "$1el").replace(/\b([Aa]) e
 const fill = (s, vars) => contraer(s.replace(/\{(\w+)\}/g, (m, k) => (k in vars ? vars[k] : m)));
 
 /**
- * Genera un caso completo sin internet.
- * Forma del caso (la misma que devuelve el Detective IA):
- * { titulo, relato, lugar_crimen, hora, pistas[], evento_secreto, eventos_falsos[5],
- *   cartas[{jugador, lugar, actividad, visto, extra}], coartada_falsa{lugar, actividad}, verdad }
+ * Reparte las cartas de un caso a partir de su «material» (del archivo o inventado por la IA).
+ * El reparto lo hace siempre este código, así las cartas nunca se contradicen entre sí.
+ * material: { titulo, relato, lugar_crimen, hora, pistas[], lugares[{n, acts[]}], coartada_falsa{lugar, actividad},
+ *             evento_secreto, eventos_falsos[], verdad }
+ * Devuelve: { titulo, relato, lugar_crimen, hora, pistas[], evento_secreto, eventos_falsos[5],
+ *             cartas[{jugador, lugar, actividad, visto, extra}], coartada_falsa{lugar, actividad}, verdad }
  */
-export function generarCasoLocal({ jugadores, culpable, escenarioId, usados = [], random = Math.random }) {
+export function armarCaso({ jugadores, culpable, material, random = Math.random }) {
   const r = random;
-  const candidatos = ESCENARIOS.filter((e) => !escenarioId || escenarioId === "azar" || e.id === escenarioId);
-  let esc = pick(r, candidatos.length ? candidatos : ESCENARIOS);
-  // evita repetir el mismo crimen en la misma partida
-  let crimen = null;
-  for (let i = 0; i < 12 && !crimen; i++) {
-    const c = pick(r, esc.crimenes);
-    if (!usados.includes(c.titulo)) crimen = c;
-    else if (!escenarioId || escenarioId === "azar") esc = pick(r, ESCENARIOS);
-  }
-  if (!crimen) crimen = pick(r, esc.crimenes);
-
-  const lugares = shuffle(r, esc.lugares);
-  const lugarCrimen = lugares[0];
-  const lugarFalso = lugares[1];
-  const libres = lugares.slice(2); // 6 lugares para inocentes
-  const hora = pick(r, HORAS);
-  const eventos = shuffle(r, esc.eventos);
-  const evento = eventos[0];
-
+  const libres = shuffle(r, material.lugares);
   const inocentes = jugadores.filter((j) => j !== culpable);
   const orden = shuffle(r, inocentes);
-  // Con 5+ inocentes se forman parejas en el mismo lugar para que se confirmen entre sí.
+  // Con 4+ inocentes se forman parejas en el mismo lugar para que se confirmen entre sí.
   const asign = {};
   let li = 0;
   for (let i = 0; i < orden.length; i++) {
     const enPareja = orden.length >= 4 && i % 3 === 1; // comparte lugar con el anterior
     if (!enPareja && i > 0) li++;
-    const lugar = libres[li % libres.length];
-    asign[orden[i]] = lugar;
+    asign[orden[i]] = libres[li % libres.length];
   }
   const cartas = inocentes.map((j) => {
     const lugar = asign[j];
@@ -76,30 +59,119 @@ export function generarCasoLocal({ jugadores, culpable, escenarioId, usados = []
       visto = "No te cruzaste con nadie.";
     }
     const acts = lugar.acts;
-    const actividad = companeros.length ? acts[inocentes.indexOf(j) % acts.length] : pick(r, acts);
-    return { jugador: j, lugar: lugar.n, actividad, visto, extra: null };
+    // Quienes comparten lugar reciben actividades distintas.
+    const grupo = inocentes.filter((o) => asign[o].n === lugar.n);
+    const actividad = companeros.length ? acts[grupo.indexOf(j) % acts.length] : pick(r, acts);
+    return { jugador: j, lugar: lugar.n, actividad, visto: contraer(visto), extra: null };
   });
   // Testigo: con mesas grandes, un inocente sabe que el lugar de la coartada falsa estaba vacío.
   if (inocentes.length >= 4) {
-    const testigo = pick(r, cartas);
-    testigo.extra = `Pasaste por ${lugarFalso.n} y no había nadie.`;
+    pick(r, cartas).extra = `Pasaste por ${material.coartada_falsa.lugar} y no había nadie.`;
   }
-
-  const vars = { lugar: lugarCrimen.n, lugar_crimen: lugarCrimen.n, lugar_falso: lugarFalso.n, culpable, hora };
   return {
-    escenario: esc.nombre,
-    ambiente: esc.ambiente,
-    titulo: crimen.titulo,
-    relato: `Estaban en ${esc.ambiente}. ${fill(crimen.relato, vars)} Ocurrió cerca de las ${hora}.`,
-    lugar_crimen: lugarCrimen.n,
-    hora,
-    pistas: crimen.pistas.slice(),
-    evento_secreto: evento,
-    eventos_falsos: eventos.slice(1, 6),
+    titulo: material.titulo,
+    relato: material.relato,
+    lugar_crimen: material.lugar_crimen,
+    hora: material.hora,
+    pistas: (material.pistas || []).slice(0, 3),
+    evento_secreto: material.evento_secreto,
+    eventos_falsos: material.eventos_falsos.slice(0, 5),
     cartas,
-    coartada_falsa: { lugar: lugarFalso.n, actividad: pick(r, lugarFalso.acts) },
-    verdad: fill(pick(r, VERDADES), vars),
+    coartada_falsa: { lugar: material.coartada_falsa.lugar, actividad: material.coartada_falsa.actividad },
+    verdad: material.verdad,
   };
+}
+
+/** Genera un caso completo sin internet a partir del archivo de escenarios. */
+export function generarCasoLocal({ jugadores, culpable, escenarioId, usados = [], random = Math.random }) {
+  const r = random;
+  const candidatos = ESCENARIOS.filter((e) => !escenarioId || escenarioId === "azar" || e.id === escenarioId);
+  let esc = pick(r, candidatos.length ? candidatos : ESCENARIOS);
+  // evita repetir el mismo crimen en la misma partida
+  let crimen = null;
+  for (let i = 0; i < 12 && !crimen; i++) {
+    const c = pick(r, esc.crimenes);
+    if (!usados.includes(c.titulo)) crimen = c;
+    else if (!escenarioId || escenarioId === "azar") esc = pick(r, ESCENARIOS);
+  }
+  if (!crimen) crimen = pick(r, esc.crimenes);
+  const lugares = shuffle(r, esc.lugares);
+  const lugarCrimen = lugares[0], lugarFalso = lugares[1];
+  const hora = pick(r, HORAS);
+  const eventos = shuffle(r, esc.eventos);
+  const vars = { lugar: lugarCrimen.n, lugar_crimen: lugarCrimen.n, lugar_falso: lugarFalso.n, culpable, hora };
+  return armarCaso({
+    jugadores, culpable, random: r,
+    material: {
+      titulo: crimen.titulo,
+      relato: `Estaban en ${esc.ambiente}. ${fill(crimen.relato, vars)} Ocurrió cerca de las ${hora}.`,
+      lugar_crimen: lugarCrimen.n,
+      hora,
+      pistas: crimen.pistas,
+      lugares: lugares.slice(2),
+      coartada_falsa: { lugar: lugarFalso.n, actividad: pick(r, lugarFalso.acts) },
+      evento_secreto: eventos[0],
+      eventos_falsos: eventos.slice(1, 6),
+      verdad: fill(pick(r, VERDADES), vars),
+    },
+  });
+}
+
+const sinAcentos = (s) => String(s).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+const VACIAS = new Set(["noche", "todos", "todas", "segundo", "segundos", "minuto", "minutos", "durante", "cuando", "donde", "estaba", "estaban", "alguien", "entero", "entera", "misma", "mismo", "veces", "hasta", "desde", "sobre", "entre", "apenas", "justo", "fuerte", "nadie", "repente"]);
+const claves = (s) => [...new Set(sinAcentos(s).split(/[^a-z0-9ñ]+/).filter((w) => w.length >= 5 && !VACIAS.has(w)).map((w) => w.slice(0, 6)))];
+/** ¿El texto delata el dato secreto? Compara las palabras distintivas (por su raíz). */
+export function delataEvento(texto, evento) {
+  const k = claves(evento);
+  if (!k.length) return false;
+  const t = sinAcentos(texto);
+  const aciertos = k.filter((w) => t.includes(w)).length;
+  return aciertos >= Math.min(2, k.length);
+}
+
+/** Deja un evento listo para completar la frase «Esa noche …». */
+export function limpiarEvento(s) {
+  let t = String(s).trim().replace(/^esa noche[,:]?\s*/i, "").replace(/[.!\s]+$/, "");
+  return t.charAt(0).toLowerCase() + t.slice(1);
+}
+/** Deja una actividad lista para completar «Estabas en X, …» («Estabas en el patio, Bailando.» -> «bailando»). */
+export function limpiarActividad(s) {
+  const t = String(s).trim().replace(/^estabas(\s+en\s+[^,]+)?\s*,?\s*/i, "").replace(/[.\s]+$/, "");
+  return t.charAt(0).toLowerCase() + t.slice(1);
+}
+/** Normaliza el nombre de un lugar («La cocina.» -> «la cocina») para usarlo dentro de una frase. */
+export function conArticulo(s) {
+  const t = String(s).trim().replace(/[.\s]+$/, "");
+  return t.charAt(0).toLowerCase() + t.slice(1);
+}
+
+/**
+ * Convierte el material inventado por la IA en un caso jugable. Lanza Error si no sirve.
+ */
+export function armarCasoIA({ jugadores, culpable, material, random = Math.random }) {
+  const m = material || {};
+  for (const k of ["titulo", "relato", "lugar_crimen", "hora", "evento_secreto", "verdad"]) if (typeof m[k] !== "string" || !m[k].trim()) throw new Error("Caso incompleto: " + k);
+  if (!m.coartada_falsa || !m.coartada_falsa.lugar || !m.coartada_falsa.actividad) throw new Error("Falta la coartada falsa");
+  const prohibidos = [sinAcentos(conArticulo(m.lugar_crimen)), sinAcentos(conArticulo(m.coartada_falsa.lugar))];
+  const vistos = new Set();
+  const lugares = (Array.isArray(m.lugares) ? m.lugares : [])
+    .map((l) => ({ n: conArticulo(l && l.nombre || ""), acts: (l && Array.isArray(l.actividades) ? l.actividades : []).filter((a) => typeof a === "string" && a.trim()).map(limpiarActividad).filter(Boolean) }))
+    .filter((l) => l.n && l.acts.length && !prohibidos.includes(sinAcentos(l.n)) && !vistos.has(sinAcentos(l.n)) && vistos.add(sinAcentos(l.n)));
+  if (lugares.length < 4) throw new Error("Faltan lugares");
+  for (const l of lugares) if (l.acts.length < 2) l.acts.push(l.acts[0]);
+  const evento = limpiarEvento(m.evento_secreto);
+  const falsos = [...new Set((Array.isArray(m.eventos_falsos) ? m.eventos_falsos : []).filter((e) => typeof e === "string" && e.trim()).map(limpiarEvento))].filter((e) => sinAcentos(e) !== sinAcentos(evento));
+  if (falsos.length < 5) throw new Error("Faltan eventos falsos");
+  if (delataEvento(m.relato + " " + (m.pistas || []).join(" "), evento)) throw new Error("El relato delata el dato secreto");
+  return armarCaso({
+    jugadores, culpable, random,
+    material: {
+      titulo: m.titulo.trim(), relato: m.relato.trim(), lugar_crimen: conArticulo(m.lugar_crimen), hora: m.hora.trim(),
+      pistas: (Array.isArray(m.pistas) ? m.pistas : []).filter((x) => typeof x === "string" && x.trim()),
+      lugares, coartada_falsa: { lugar: conArticulo(m.coartada_falsa.lugar), actividad: limpiarActividad(m.coartada_falsa.actividad) || "sin hacer nada" },
+      evento_secreto: evento, eventos_falsos: falsos, verdad: m.verdad.trim(),
+    },
+  });
 }
 
 /** Comprueba y normaliza un caso (local o generado por la IA). Lanza Error si no sirve. */

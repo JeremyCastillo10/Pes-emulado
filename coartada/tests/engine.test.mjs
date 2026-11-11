@@ -1,6 +1,6 @@
 // Pruebas del motor: genera miles de casos y comprueba que sean coherentes.
 import assert from "node:assert/strict";
-import { generarCasoLocal, validarCaso, preguntasLocales, puntuar, contarVotos, opcionesEvento, rng } from "../src/engine.js";
+import { generarCasoLocal, validarCaso, preguntasLocales, puntuar, contarVotos, opcionesEvento, rng, armarCasoIA, delataEvento, limpiarEvento, limpiarActividad } from "../src/engine.js";
 
 const NOMBRES = ["Ana", "Beto", "Caro", "Dani", "Eli", "Fede", "Gabi", "Hugo", "Iris", "Juan"];
 let casos = 0;
@@ -25,7 +25,7 @@ for (let n = 3; n <= 10; n++) {
       for (const o of caso.cartas) {
         if (o === c) continue;
         if (c.visto.includes(o.jugador + " caminando hacia")) assert.ok(c.visto.includes(o.lugar), `${c.jugador} vio mal a ${o.jugador}`);
-        if (c.visto.includes("contigo") && c.visto.split(" estaba")[0].split(" y ").includes(o.jugador)) assert.equal(o.lugar, c.lugar);
+        if (c.visto.includes("contigo") && c.visto.split(" estaba")[0].split(" y ").includes(o.jugador)) { assert.equal(o.lugar, c.lugar); assert.notEqual(o.actividad, c.actividad, "misma actividad en pareja"); }
       }
       assert.ok(!c.visto.includes(culpable), "nadie ve al culpable en su carta");
     }
@@ -48,4 +48,28 @@ p = puntuar({ jugadores: J, culpable: "A", votos: { A: "B", B: "C", C: "B", D: "
 assert.equal(p.acusado, "B"); assert.deepEqual(p.puntos, { A: 4, B: 0, C: 0, D: 0 });
 assert.equal(contarVotos({}, J).acusado, null);
 assert.throws(() => validarCaso({ titulo: "x" }, J, "A"));
+// Filtro del dato secreto
+assert.ok(delataEvento("¿Dónde estabas cuando la parrilla se apagó un segundo?", "se apagó la parrilla por un segundo"));
+assert.ok(delataEvento("Nadie sintió que la tierra tembló", "tembló la tierra un segundo"));
+assert.ok(!delataEvento("¿Qué hiciste cuando pasó «eso» que todos recuerdan?", "se apagó la parrilla por un segundo"));
+assert.ok(!delataEvento("¿Quién puede confirmar que estabas en el garaje?", "el ventilador se apagó y se escuchó un ladrido de perro"));
+assert.equal(limpiarEvento("Esa noche, Se fue la luz."), "se fue la luz");
+assert.equal(limpiarActividad("Estabas en el garaje, Reparando tu coche."), "reparando tu coche");
+assert.equal(limpiarActividad("bailando solo"), "bailando solo");
+// Casos de la IA: el motor reparte y rechaza material defectuoso
+const mat = () => ({ titulo: "T", relato: "Pasó algo en la cocina.", lugar_crimen: "La cocina.", hora: "10", pistas: ["p"], evento_secreto: "Esa noche ladró un perro enorme.",
+  eventos_falsos: ["a1 cosa", "b2 cosa", "c3 cosa", "d4 cosa", "e5 cosa", "ladró un perro enorme"], coartada_falsa: { lugar: "El garaje. ", actividad: "durmiendo." },
+  lugares: ["la cocina", "el garaje", "el patio", "El Patio", "la sala", "el baño", "la azotea", "el pasillo"].map((n) => ({ nombre: n, actividades: ["x"] })), verdad: "V" });
+for (let n = 3; n <= 10; n++) {
+  for (let sd = 1; sd <= 50; sd++) {
+  const jug = NOMBRES.slice(0, n), c = armarCasoIA({ jugadores: jug, culpable: jug[0], material: mat(), random: rng(n * 100 + sd) });
+  validarCaso(c, jug, jug[0]);
+  assert.ok(!c.cartas.some((k) => ["la cocina", "el garaje"].includes(k.lugar)));
+  assert.equal(c.evento_secreto, "ladró un perro enorme"); assert.equal(c.eventos_falsos.length, 5); assert.equal(c.lugar_crimen, "la cocina");
+  }
+}
+assert.throws(() => armarCasoIA({ jugadores: J, culpable: "A", material: { ...mat(), lugares: [] } }));
+assert.throws(() => armarCasoIA({ jugadores: J, culpable: "A", material: { ...mat(), eventos_falsos: ["x"] } }));
+assert.throws(() => armarCasoIA({ jugadores: J, culpable: "A", material: { ...mat(), relato: "De pronto ladró un perro enorme." } }));
+assert.throws(() => armarCasoIA({ jugadores: J, culpable: "A", material: null }));
 console.log(`OK: ${casos} casos generados y verificados, puntuación correcta.`);

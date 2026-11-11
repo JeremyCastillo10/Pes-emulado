@@ -24,8 +24,8 @@ a un inocente.
 
 - **Clásico (sin internet).** Casos del archivo: 6 escenarios, 18 crímenes y un generador que
   reparte lugares, testigos y eventos, así que no se repiten.
-- **Detective IA.** Con una clave de API de Anthropic (Ajustes), la IA inventa el caso a la medida
-  del grupo y del lugar donde están, lee el resumen de cada respuesta, hace preguntas que cruzan
+- **Detective IA.** Con una clave de API de Groq (Ajustes), la IA inventa el escenario a la medida
+  del grupo y del lugar donde están (las cartas las reparte siempre el motor, para que cuadren), lee el resumen de cada respuesta, hace preguntas que cruzan
   las versiones y al final acusa a alguien sin saber quién es el culpable. La clave se guarda solo
   en el teléfono. Si la IA falla o no hay conexión, la partida sigue en modo Clásico.
 
@@ -35,7 +35,7 @@ a un inocente.
 |---|---|
 | `src/content.js` | Escenarios, crímenes, eventos y preguntas del modo Clásico |
 | `src/engine.js` | Generador de casos, validación y puntuación |
-| `src/ai.js` | Detective IA (SDK oficial de Anthropic) |
+| `src/ai.js` | Detective IA (API de Groq, modo JSON) |
 | `src/main.js` | Pantallas y flujo de la partida |
 | `www/` | La app web lista para abrir (`index.html`, `style.css`, `app.js` empaquetado) |
 | `apk-src/` | Envoltorio Android: manifiesto, icono y `MainActivity` (WebView) |

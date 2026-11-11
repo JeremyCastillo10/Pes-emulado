@@ -23,11 +23,11 @@ import java.util.Iterator;
 
 /**
  * Coartada: el juego es una página web empaquetada en assets/www y mostrada en un WebView.
- * El puente "CoartadaNative" solo ofrece peticiones HTTPS a api.anthropic.com para el Detective IA.
+ * El puente "CoartadaNative" solo ofrece peticiones HTTPS a api.groq.com para el Detective IA.
  */
 public class MainActivity extends Activity {
     private static final String INICIO = "file:///android_asset/www/index.html";
-    private static final String API = "https://api.anthropic.com/";
+    private static final String API = "https://api.groq.com/";
     private WebView web;
 
     @Override
@@ -114,6 +114,7 @@ public class MainActivity extends Activity {
                         c.setConnectTimeout(20000);
                         c.setReadTimeout(180000);
                         c.setRequestMethod(metodo);
+                        c.setRequestProperty("User-Agent", "Coartada/1.0 (Android)");
                         JSONObject cab = new JSONObject(cabecerasJson);
                         for (Iterator<String> it = cab.keys(); it.hasNext(); ) {
                             String k = it.next();

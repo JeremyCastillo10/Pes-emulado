@@ -116,26 +116,29 @@ async function votar(page, nombres, culpable, todosAlCulpable) {
   const { ctx, page } = await nueva();
   const N = ["Ana", "Beto", "Caro"];
   const llamadas = [];
-  await page.route("https://api.anthropic.com/**", async (route) => {
+  const cors = { "access-control-allow-origin": "*", "access-control-allow-headers": "*" };
+  await page.route("https://api.groq.com/**", async (route) => {
     const req = route.request();
-    if (req.method() === "OPTIONS") return route.fulfill({ status: 204, headers: { "access-control-allow-origin": "*", "access-control-allow-headers": "*" } });
+    if (req.method() === "OPTIONS") return route.fulfill({ status: 204, headers: cors });
+    if (req.url().endsWith("/models")) return route.fulfill({ status: 200, contentType: "application/json", headers: cors, body: JSON.stringify({ data: [{ id: "openai/gpt-oss-120b", active: true, context_window: 131072 }, { id: "whisper-large-v3", active: true, context_window: 448 }] }) });
     const body = JSON.parse(req.postData());
     llamadas.push({ url: req.url(), body, headers: req.headers() });
-    const props = Object.keys(body.output_config.format.schema.properties);
+    const sys = body.messages[0].content, usr = body.messages[1].content;
     let out;
-    if (props.includes("saludo")) out = { saludo: "Buenas noches" };
-    else if (props.includes("cartas")) {
-      const culp = /Culpable de este caso: (\w+)/.exec(body.messages[0].content)[1];
-      out = { titulo: "El caso del flan robado", relato: "Alguien se comió el flan en la cocina.", lugar_crimen: "la cocina", hora: "las 10", pistas: ["Una cuchara tibia."], evento_secreto: "tembló la tierra un segundo", eventos_falsos: ["llovió", "cantó un gallo", "se fue la luz", "pasó un tren", "ladró un perro"],
-        cartas: N.filter((j) => j !== culp).map((j) => ({ jugador: j, lugar: "el patio", actividad: "regando matas", visto: "Estabas con el otro inocente.", extra: null })), coartada_falsa: { lugar: "el garaje", actividad: "buscando una llave" }, verdad: culp + " se comió el flan." };
-    } else if (props.includes("preguntas")) out = { preguntas: N.map((j) => ({ jugador: j, pregunta: "PREGUNTA-IA para " + j })) };
-    else out = { informe: "Algo no me cuadra.", contradicciones: ["Beto dudó."], acusado: "Beto", frase_final: "Fuiste tú, Beto." };
-    await route.fulfill({ status: 200, contentType: "application/json", headers: { "access-control-allow-origin": "*" },
-      body: JSON.stringify({ id: "msg_1", type: "message", role: "assistant", model: body.model, content: [{ type: "text", text: JSON.stringify(out) }], stop_reason: "end_turn", stop_sequence: null, usage: { input_tokens: 1, output_tokens: 1 } }) });
+    if (sys.includes('"saludo"')) out = { saludo: "Buenas noches" };
+    else if (sys.includes('"lugares"')) {
+      const culp = /Culpable de este caso: (\w+)/.exec(usr)[1];
+      out = { titulo: "El caso del flan robado", relato: "Alguien se comió el flan en la cocina.", lugar_crimen: "La cocina.", hora: "10 de la noche", pistas: ["Una cuchara tibia."],
+        lugares: ["el patio", "la sala", "el balcón", "el baño", "la terraza", "el garaje", "la cocina"].map((n) => ({ nombre: n, actividades: ["regando matas", "bailando solo"] })),
+        coartada_falsa: { lugar: "el garaje", actividad: "buscando una llave" }, evento_secreto: "Esa noche tembló la tierra un segundo.", eventos_falsos: ["llovió", "cantó un gallo", "se fue la luz", "pasó un tren", "ladró un perro"], verdad: culp + " se comió el flan." };
+    } else if (sys.includes('"preguntas"')) out = { preguntas: N.map((j, i) => ({ jugador: j, pregunta: i === 0 ? "¿Dónde estabas cuando tembló la tierra?" : "PREGUNTA-IA para " + j })) };
+    else out = { informe: "Algo no me cuadra.", contradicciones: ["Beto dudó.", "Nadie sintió que la tierra tembló."], acusado: "Beto", frase_final: "Fuiste tú, Beto." };
+    await route.fulfill({ status: 200, contentType: "application/json", headers: cors,
+      body: JSON.stringify({ id: "c1", object: "chat.completion", model: body.model, choices: [{ index: 0, finish_reason: "stop", message: { role: "assistant", content: JSON.stringify(out) } }] }) });
   });
   await page.goto(url);
   await page.click('[data-a="ajustes"]');
-  await page.fill("#apiKey", "sk-ant-prueba");
+  await page.fill("#apiKey", "gsk_prueba");
   await page.click('[data-a="probar"]');
   await page.waitForFunction(() => document.querySelector("#pruebaRes").textContent.includes("Conectado"));
   await foto(page, "ajustes");
@@ -149,13 +152,20 @@ async function votar(page, nombres, culpable, todosAlCulpable) {
   await page.waitForFunction(() => document.querySelector("#app").dataset.p === "caso");
   if (!(await page.locator(".titular").innerText()).includes("flan")) throw new Error("no usó el caso de la IA");
   await repartir(page, N, "");
+  const caso = (await estado(page)).partida.ronda.caso;
+  if (caso.evento_secreto !== "tembló la tierra un segundo") throw new Error("evento sin limpiar: " + caso.evento_secreto);
+  if (caso.lugar_crimen !== "la cocina" || caso.cartas.some((c) => ["la cocina", "el garaje"].includes(c.lugar))) throw new Error("lugares mal repartidos");
+  let iaVistas = 0, filtradas = 0;
   for (let q = 0; q < 6; q++) {
     await page.waitForFunction(() => document.querySelector("#app").dataset.p === "interrogatorio");
-    if (q === 3 && !(await page.locator(".pregunta").innerText()).includes("PREGUNTA-IA")) throw new Error("la ronda 2 no usó preguntas de la IA");
+    const txt = await page.locator(".pregunta").innerText();
+    if (txt.includes("tembló")) throw new Error("una pregunta delató el dato secreto");
+    if (q >= 3) { if (txt.includes("PREGUNTA-IA")) iaVistas++; else filtradas++; }
     await page.fill("#respuesta", "respuesta " + q);
-    if (q === 3) await foto(page, "pregunta-ia");
+    if (q === 4) await foto(page, "pregunta-ia");
     await fijo(page).click();
   }
+  if (iaVistas !== 2 || filtradas !== 1) throw new Error("ronda 2: se esperaban 2 preguntas de la IA y 1 sustituida, hubo " + iaVistas + " y " + filtradas);
   await page.waitForFunction(() => document.querySelector("#app").dataset.p === "careo");
   const culpable = (await estado(page)).partida.ronda.culpable;
   await votar(page, N, culpable, false);
@@ -165,17 +175,18 @@ async function votar(page, nombres, culpable, todosAlCulpable) {
   const s = await estado(page);
   const esperado = 4 + (culpable !== "Beto" ? 1 : 0);
   if (s.partida.puntos[culpable] !== esperado) throw new Error("puntos IA: " + s.partida.puntos[culpable] + " != " + esperado);
+  if (s.partida.ronda.veredicto.contradicciones.length !== 1) throw new Error("no se filtró la contradicción que delataba el secreto");
   // Forma de las peticiones
   if (llamadas.length !== 4) throw new Error("se esperaban 4 llamadas, hubo " + llamadas.length);
   for (const l of llamadas) {
-    if (l.body.model !== "claude-opus-5-5") throw new Error("modelo inesperado");
-    if (l.headers["authorization"] !== "Bearer sk-ant-prueba" && l.headers["x-api-key"] !== "sk-ant-prueba") throw new Error("falta la clave");
-    if (l.body.fallbacks !== "default" || !String(l.headers["anthropic-beta"]).includes("server-side-fallback-2026-07-01")) throw new Error("falta el relevo");
-    if ("thinking" in l.body || "temperature" in l.body) throw new Error("parámetros no admitidos");
+    if (!l.url.endsWith("/openai/v1/chat/completions")) throw new Error("ruta inesperada " + l.url);
+    if (l.body.model !== "openai/gpt-oss-120b") throw new Error("modelo inesperado");
+    if (l.headers["authorization"] !== "Bearer gsk_prueba") throw new Error("falta la clave");
+    if (l.body.response_format.type !== "json_object") throw new Error("falta el modo JSON");
   }
-  const det = llamadas[2].body;
-  if (!det.messages[0].content.includes("respuesta 0")) throw new Error("el detective no recibió las respuestas");
-  if (/Culpable|culpable de este caso/.test(det.messages[0].content)) throw new Error("se le filtró el culpable al detective");
+  const det = llamadas[2].body.messages[1].content;
+  if (!det.includes("respuesta 0")) throw new Error("el detective no recibió las respuestas");
+  if (/Culpable de este caso/.test(det) || /coartada falsa/i.test(det)) throw new Error("se le filtró el culpable al detective");
   await ctx.close();
 }
 await browser.close();
