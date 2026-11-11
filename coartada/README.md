@@ -55,7 +55,7 @@ Para probar en el computador basta abrir `www/index.html` en un navegador.
 
 ## Compilar el APK
 
-Hace falta el SDK de Android con `build-tools;34.0.0` y `platforms;android-34`:
+Hace falta el SDK de Android con `build-tools;35.0.0` y `platforms;android-34`:
 
 ```bash
 export ANDROID_HOME=/ruta/al/sdk

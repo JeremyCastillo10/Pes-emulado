@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 # Compila releases/Coartada.apk con el SDK oficial de Android, sin Gradle.
 # Requisitos: JDK 17+, Node 18+ y el SDK de Android (ANDROID_HOME) con
-#   build-tools;34.0.0 y platforms;android-34
-#   sdkmanager "build-tools;34.0.0" "platforms;android-34"
+#   build-tools;35.0.0 y platforms;android-34
+#   sdkmanager "build-tools;35.0.0" "platforms;android-34"
 set -euo pipefail
 cd "$(dirname "$0")"
 
 SDK="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-}}"
 [ -n "$SDK" ] || { echo "Define ANDROID_HOME con la ruta del SDK de Android." >&2; exit 1; }
-BT="$SDK/build-tools/${BUILD_TOOLS:-34.0.0}"
+BT="$SDK/build-tools/${BUILD_TOOLS:-35.0.0}"
 PLAT="$SDK/platforms/${PLATFORM:-android-34}/android.jar"
 [ -x "$BT/aapt2" ] && [ -f "$PLAT" ] || { echo "Faltan build-tools o la plataforma en $SDK." >&2; exit 1; }
 
