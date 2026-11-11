@@ -1,0 +1,17 @@
+{
+  "name": "coartada",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Coartada: juego de fiesta de deducción con detective IA",
+  "scripts": {
+    "build": "esbuild src/main.js --bundle --format=iife --target=chrome80 --minify --outfile=www/app.js",
+    "test": "node tests/engine.test.mjs"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^1.8.0"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.12"
+  }
+}

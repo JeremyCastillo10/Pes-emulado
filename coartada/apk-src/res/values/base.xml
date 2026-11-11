@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Coartada</string>
+    <color name="tinta">#14110F</color>
+    <color name="ambar">#F2C230</color>
+    <style name="Tema" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/tinta</item>
+        <item name="android:statusBarColor">@color/tinta</item>
+        <item name="android:navigationBarColor">@color/tinta</item>
+        <item name="android:colorAccent">@color/ambar</item>
+    </style>
+</resources>

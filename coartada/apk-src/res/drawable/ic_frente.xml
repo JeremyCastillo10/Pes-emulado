@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Lupa ámbar con una huella roja dentro, sobre fondo tinta. Lienzo de icono adaptable (108dp, zona segura 66dp). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="108" android:viewportHeight="108">
+    <path android:fillColor="#F2C230" android:pathData="M63.5,66.5 L68.5,61.5 L82,75 A3.5,3.5 0 0 1 77,80 Z" />
+    <path android:fillColor="#00000000" android:strokeColor="#F2C230" android:strokeWidth="6"
+        android:pathData="M49,29 A20,20 0 1 1 48.99,29 Z" />
+    <path android:fillColor="#EFE6D2" android:pathData="M49,34 A15,15 0 1 1 48.99,34 Z" />
+    <path android:fillColor="#00000000" android:strokeColor="#C8372D" android:strokeWidth="2.2" android:strokeLineCap="round"
+        android:pathData="M42,53 C40,44 44,39 49,39 C54,39 58,44 56,53 M45.5,56 C44,47 46,43 49,43 C52,43 54,47 52.5,56 M49,47 L49,58" />
+</vector>
