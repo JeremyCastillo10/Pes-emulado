@@ -6,7 +6,7 @@ import { MODELOS, MODELO_POR_DEFECTO, ErrorIA, probarConexion, listarModelos, ge
 // ---------- Estado ----------
 const CLAVE = "coartada.v1";
 // Dirección pública del juego: se usa en el enlace de invitación a una sala.
-const URL_WEB = "__URL_WEB__";
+const URL_WEB = "https://coartada-delta.vercel.app";
 const MIN_J = 3, MAX_J = 10;
 let S = { cfg: { apiKey: "", modelo: MODELO_POR_DEFECTO, modelos: [] }, nombres: ["", "", ""], prefs: { casos: 3, preguntas: 2, modo: "clasico", escenario: "azar", ambientacion: "", tono: "absurdo", reloj: true }, partida: null, multi: null, miNombre: "" };
 let pantalla = "inicio";
