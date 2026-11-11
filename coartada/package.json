@@ -9,6 +9,8 @@
     "test": "node tests/engine.test.mjs"
   },
   "devDependencies": {
-    "esbuild": "^0.25.12"
+    "aedes": "^1.2.0",
+    "esbuild": "^0.25.12",
+    "ws": "^8.22.2"
   }
 }

@@ -249,3 +249,20 @@ textarea { resize: none; }
   content: ""; position: fixed; left: 0; right: 0; bottom: 0; height: calc(96px + env(safe-area-inset-bottom));
   background: linear-gradient(to bottom, transparent, var(--tinta) 38%); pointer-events: none; z-index: 4;
 }
+
+/* ---- Salas ---- */
+.codigo-caja { text-align: center; padding: 6px 0 18px; display: flex; flex-direction: column; gap: 8px; align-items: center; }
+.codigo { font-family: var(--mono); font-size: clamp(52px, 17vw, 72px); letter-spacing: .16em; margin-right: -.16em; color: var(--ambar); line-height: 1.05; -webkit-user-select: text; user-select: text; }
+.codigo-in { font-family: var(--mono); font-size: 28px; letter-spacing: .3em; text-align: center; text-transform: uppercase; }
+.jug { display: flex; align-items: center; gap: 12px; padding: 7px 0; border-bottom: 1px dashed #b9ac8d; min-height: 54px; }
+.jug b { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.jug small { font-family: var(--mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: #7d6a52; border: 1px solid #b9ac8d; border-radius: 4px; padding: 1px 6px; }
+.jug .avatar { background: #1c1815; color: var(--papel); }
+.banda { background: var(--rojo-osc); color: #fff; text-align: center; font-size: 14px; padding: 8px 10px; border-radius: 8px; margin-bottom: 12px; }
+.espera { display: flex; align-items: center; justify-content: center; gap: 10px; color: var(--gris); text-align: center; padding: 14px 6px; font-size: 15px; }
+.espera i { width: 10px; height: 10px; border-radius: 50%; background: var(--ambar); flex: none; animation: pulso 1.2s infinite; }
+.chip-btn { background: var(--ambar); color: #111; border: 0; font-weight: 700; padding: 8px 12px; min-height: 36px; }
+.modal-caja .carta { min-height: 430px; margin-bottom: 14px; }
+.modal-caja:has(.carta) { background: var(--tinta-2); padding: 14px; }
+.modal-caja:has(.carta) .btn-linea { color: var(--texto); border-color: #5a4f46; }
+.portada .pila .fila .btn { min-height: 48px; font-size: 15px; padding: 10px 8px; }

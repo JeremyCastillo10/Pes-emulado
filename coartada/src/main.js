@@ -1,11 +1,14 @@
 import { ESCENARIOS } from "./content.js";
 import { generarCasoLocal, armarCasoIA, preguntasLocales, contarVotos, puntuar, opcionesEvento, shuffle, pick } from "./engine.js";
+import { instalarMulti } from "./multi.js";
 import { MODELOS, MODELO_POR_DEFECTO, ErrorIA, probarConexion, listarModelos, generarCasoIA, preguntasIA, veredictoIA } from "./ai.js";
 
 // ---------- Estado ----------
 const CLAVE = "coartada.v1";
+// Dirección pública del juego: se usa en el enlace de invitación a una sala.
+const URL_WEB = "__URL_WEB__";
 const MIN_J = 3, MAX_J = 10;
-let S = { cfg: { apiKey: "", modelo: MODELO_POR_DEFECTO, modelos: [] }, nombres: ["", "", ""], prefs: { casos: 3, preguntas: 2, modo: "clasico", escenario: "azar", ambientacion: "", tono: "absurdo", reloj: true }, partida: null };
+let S = { cfg: { apiKey: "", modelo: MODELO_POR_DEFECTO, modelos: [] }, nombres: ["", "", ""], prefs: { casos: 3, preguntas: 2, modo: "clasico", escenario: "azar", ambientacion: "", tono: "absurdo", reloj: true }, partida: null, multi: null, miNombre: "" };
 let pantalla = "inicio";
 let ui = {}; // estado efímero de la pantalla actual
 let veredictoPendiente = null; // promesa en curso del veredicto IA
@@ -27,6 +30,8 @@ const vibrar = (ms) => { try { navigator.vibrate && navigator.vibrate(ms); } cat
 const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
 let tictac = null;
 function pararReloj() { if (tictac) { clearInterval(tictac); tictac = null; } }
+function ponerReloj(fn, ms) { pararReloj(); tictac = setInterval(fn, ms); }
+const EFECTOS = {}; // efectos extra por pantalla (los registra el modo de salas)
 function toast(msg) {
   const t = $("#toast");
   t.textContent = msg; t.classList.add("ver");
@@ -165,12 +170,14 @@ V.inicio = () => `
     </div>
     <p class="lema">Uno de ustedes lo hizo.<br>Todos juran que no.</p>
     <div class="pila">
-      ${S.partida ? `<button class="btn btn-claro" data-a="continuar">Continuar partida</button>` : ""}
-      <button class="btn btn-rojo" data-a="config">Nueva partida</button>
-      <button class="btn btn-linea" data-a="reglas">Cómo se juega</button>
-      <button class="btn btn-linea" data-a="ajustes">Ajustes · Detective IA</button>
+      ${S.multi ? `<button class="btn btn-claro" data-a="salaVolver">Volver a la sala ${esc(S.multi.sala)}</button>` : ""}
+      <button class="btn btn-rojo" data-a="salaCrear">Crear sala</button>
+      <button class="btn btn-claro" data-a="salaUnirse">Unirme a una sala</button>
+      <button class="btn btn-linea" data-a="${S.partida ? "continuar" : "config"}">${S.partida ? "Continuar en un solo teléfono" : "Jugar en un solo teléfono"}</button>
+      ${S.partida ? `<button class="btn btn-linea" data-a="config">Nueva partida en un teléfono</button>` : ""}
+      <div class="fila"><button class="btn btn-linea" data-a="reglas">Cómo se juega</button><button class="btn btn-linea" data-a="ajustes">Ajustes</button></div>
     </div>
-    <p class="pie">3 a 10 jugadores · un solo teléfono</p>
+    <p class="pie">3 a 10 jugadores · cada quien en su teléfono</p>
   </section>`;
 
 V.reglas = () => `
@@ -179,12 +186,14 @@ V.reglas = () => `
     <h3>1. El caso</h3>
     <p>El teléfono presenta un «crimen» absurdo. Uno de ustedes es el <b>culpable</b>; los demás son <b>inocentes</b>.</p>
     <h3>2. Las cartas</h3>
-    <p>Se pasa el teléfono y cada quien mira su carta en secreto. Los inocentes saben dónde estaban, a quién vieron y un <b>dato secreto</b>: algo que pasó esa noche y que el culpable no sabe.</p>
+    <p>Cada quien mira su carta en secreto en su teléfono (o pasándose uno solo). Los inocentes saben dónde estaban, a quién vieron y un <b>dato secreto</b>: algo que pasó esa noche y que el culpable no sabe.</p>
     <h3>3. El interrogatorio</h3>
     <p>El detective pregunta a cada jugador y se responde <b>en voz alta</b>. Los inocentes dicen la verdad de su carta; el culpable improvisa.</p>
     <p class="nota"><b>Regla de oro:</b> nadie puede decir el dato secreto de forma directa. Hablen de él con rodeos: así el culpable no puede copiarlo… y se nota quién no lo vivió.</p>
     <h3>4. Careo y votación</h3>
-    <p>Discutan libremente y luego voten en secreto pasando el teléfono.</p>
+    <p>Discutan libremente y luego voten en secreto.</p>
+    <h3>Salas</h3>
+    <p>Uno crea la sala y comparte el código de 5 letras; los demás entran desde su teléfono con la app o con el enlace. El teléfono del anfitrión lleva la partida, así que debe mantener la app abierta. También se puede jugar sin internet pasándose un solo teléfono.</p>
     <h3>5. El final</h3>
     <p>Si el culpable es el más votado, cae. Pero tiene una última jugada: si adivina el dato secreto, rescata puntos.</p>
     <h3>Puntos</h3>
@@ -512,6 +521,7 @@ function pintar() {
   efectos();
 }
 function efectos() {
+  if (EFECTOS[pantalla]) EFECTOS[pantalla]();
   if (pantalla === "cargando" && ui.frases) {
     let i = 0;
     tictac = setInterval(() => { const el = $("#fraseCarga"); if (el) el.textContent = ui.frases[++i % ui.frases.length]; }, 2200);
@@ -664,7 +674,8 @@ $("#modal").addEventListener("click", (e) => { if (e.target.id === "modal") cerr
 window.__coartadaAtras = () => {
   if ($("#modal").classList.contains("ver")) { cerrarModal(); return true; }
   if (pantalla === "inicio") return false;
-  if (["reglas", "ajustes", "config"].includes(pantalla)) { A.inicio(); return true; }
+  if (["reglas", "ajustes", "config", "entrar"].includes(pantalla)) { A.inicio(); return true; }
+  if (pantalla === "multi") { A.mSalir(); return true; }
   if (pantalla === "final") { A.terminar(); return true; }
   A.salir(); return true;
 };
@@ -673,4 +684,8 @@ window.__coartadaAtras = () => {
 window.__coartadaEstado = () => ({ pantalla, ui, S });
 
 cargar();
+const multi = instalarMulti({ S, guardar, ir, pintar, esc, cap, toast, modal, cerrarModal, vibrar, pitido, V, A, EFECTOS, pararReloj, ponerReloj, URL_WEB: location.protocol.startsWith("http") ? location.origin : (URL_WEB.startsWith("http") ? URL_WEB : ""), pantalla: () => pantalla, ui: () => ui });
+const salaEnlace = (new URLSearchParams(location.search).get("sala") || "").toUpperCase().replace(/[^A-Z]/g, "").slice(0, 5);
+if (salaEnlace.length === 5 && !(S.multi && S.multi.sala === salaEnlace)) { pantalla = "entrar"; ui = { modo: "unirse", codigo: salaEnlace }; }
+else if (S.multi) { multi.reanudar(); pantalla = "multi"; }
 pintar();
