@@ -18,57 +18,49 @@ letra del código), sin cuentas ni configuración. Por ahí solo viajan datos de
 cartas, votos); la clave de Groq nunca sale del teléfono del anfitrión. Al ser servicios públicos
 y gratuitos no tienen garantía de disponibilidad.
 
-También existe **Jugar en un solo teléfono**, que funciona sin internet pasándose el aparato.
-
 ## Cómo se juega
 
-1. **El caso.** El teléfono presenta el crimen y las pistas.
-2. **Las cartas.** Cada quien mantiene presionada su carta para verla en secreto.
-   Los inocentes saben dónde estaban, a quién vieron y el dato secreto de esa noche. El culpable
-   recibe una coartada falsa sugerida.
-3. **El interrogatorio.** El detective pregunta a cada jugador. Regla de oro: nadie puede decir el
-   dato secreto de forma directa, solo con rodeos.
-4. **Careo y votación secreta.**
-5. **El final.** Si el culpable es el más votado, cae; pero puede rescatar puntos si adivina el
-   dato secreto entre seis opciones.
+1. **El caso y la carta.** Uno es el culpable. Los inocentes saben dónde estaban, a quién vieron y
+   el secreto de la noche; el culpable no sabe el secreto.
+2. **Ronda 1 · Coartadas.** Cada quien declara dónde estaba y a quién vio. Los inocentes dicen la
+   verdad y el culpable inventa; el juego cruza las versiones y marca los choques.
+3. **Ronda 2 · La pregunta.** Una pregunta sobre «eso» que pasó, con cuatro respuestas.
+4. **Ronda 3 · Palabra clave.** Una palabra que insinúe el secreto sin decirlo.
+5. **Voto.** Con el tablero de pruebas delante. Si el culpable cae, puede rescatar puntos
+   adivinando el secreto entre seis opciones.
 
 Puntos: culpable que escapa +4 · inocente que votó al culpable +2 (si cayó) o +1 (si escapó) ·
-culpable atrapado que adivina el dato secreto +2 · con Detective IA, +1 al culpable si la IA acusa
-a un inocente.
+culpable atrapado que adivina el secreto +2 · +1 al culpable si el detective acusa a un inocente.
 
-## Dos detectives
+**Bots.** «Jugar con bots» funciona sin internet, y en una sala el anfitrión puede añadir bots.
 
-- **Clásico (sin internet).** Casos del archivo: 6 escenarios, 18 crímenes y un generador que
-  reparte lugares, testigos y eventos, así que no se repiten.
-- **Detective IA.** Con una clave de API de Groq (Ajustes), la IA inventa el escenario a la medida
-  del grupo y del lugar donde están (las cartas las reparte siempre el motor, para que cuadren), lee el resumen de cada respuesta, hace preguntas que cruzan
-  las versiones y al final acusa a alguien sin saber quién es el culpable. La clave se guarda solo
-  en el teléfono. Si la IA falla o no hay conexión, la partida sigue en modo Clásico.
+**Casos con IA (opcional).** Con una clave de Groq en Ajustes, la IA inventa el caso según dónde
+estén. Las cartas las reparte siempre el motor. Si la IA falla, se usa un caso del archivo.
 
 ## Estructura
 
 | Ruta | Qué es |
 |---|---|
-| `src/content.js` | Escenarios, crímenes, eventos y preguntas del modo Clásico |
-| `src/engine.js` | Generador de casos, validación y puntuación |
-| `src/ai.js` | Detective IA (API de Groq, modo JSON) |
-| `src/main.js` | Pantallas y flujo de la partida en un solo teléfono |
+| `src/content.js` | Escenarios, crímenes, secretos, avatares y frases de los bots |
+| `src/engine.js` | Casos, cruce de coartadas, bots, detective y puntos |
+| `src/anfitrion.js` | La partida: fases, jugadas y bots |
+| `src/juego.js` | Pantallas de la partida y red de las salas |
+| `src/main.js` | Inicio, ayuda, ajustes y arranque |
+| `src/audio.js` | Música y efectos generados con WebAudio |
+| `src/ai.js` | Casos y veredicto con la API de Groq |
 | `src/mqtt.js` | Cliente MQTT mínimo sobre WebSocket |
-| `src/anfitrion.js` | Lógica de la sala en el teléfono anfitrión |
-| `src/multi.js` | Red y pantallas de las salas |
-| `www/` | La app web lista para abrir (`index.html`, `style.css`, `app.js` empaquetado) |
-| `apk-src/` | Envoltorio Android: manifiesto, icono y `MainActivity` (WebView) |
-| `build_apk.sh` | Compila `releases/Coartada.apk` |
-| `tests/` | Pruebas del motor y partida completa automática |
+| `www/` | La app lista para abrir |
+| `apk-src/`, `build_apk.sh` | Envoltorio Android y compilación del APK |
+| `tests/` | Motor (partidas simuladas), partidas contra bots y salas en navegador |
 
 ## Desarrollo
 
 ```bash
 npm install
 npm run build          # genera www/app.js
-npm test               # 3200 casos generados y verificados
-node tests/e2e.mjs     # dos partidas completas en un solo teléfono (requiere Playwright)
-node tests/multi.mjs   # salas con varios teléfonos simulados y un servidor MQTT local
+npm test               # casos verificados y 1500 partidas simuladas con bots
+node tests/bots.mjs    # partidas contra bots en un navegador sin cabeza (requiere Playwright)
+node tests/salas.mjs   # sala con varios teléfonos simulados y un servidor MQTT local
 ```
 
 Para probar en el computador basta abrir `www/index.html` en un navegador.

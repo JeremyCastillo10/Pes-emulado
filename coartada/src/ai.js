@@ -104,13 +104,13 @@ export async function listarModelos({ apiKey }) {
 }
 
 // ---- Formas de respuesta ---------------------------------------------------
-const FORMA_CASO = `{"titulo": "...", "relato": "...", "lugar_crimen": "...", "hora": "...", "pistas": ["...", "..."], "lugares": [{"nombre": "...", "actividades": ["...", "..."]}], "coartada_falsa": {"lugar": "...", "actividad": "..."}, "evento_secreto": "...", "eventos_falsos": ["...", "...", "...", "...", "..."], "verdad": "..."}`;
-const FORMA_PREGUNTAS = `{"preguntas": [{"jugador": "...", "pregunta": "..."}]}`;
-const FORMA_VEREDICTO = `{"informe": "...", "contradicciones": ["..."], "acusado": "...", "frase_final": "..."}`;
+const EV = `{"texto": "...", "emoji": "...", "sentido": "vista|oido|olfato|tacto", "reaccion": "risa|susto|enojo|asombro", "palabras": ["...", "...", "...", "...", "..."]}`;
+const FORMA_CASO = `{"emoji": "...", "titulo": "...", "relato": "...", "lugar_crimen": {"nombre": "...", "emoji": "..."}, "lugares": [{"nombre": "...", "emoji": "..."}], "evento_secreto": ${EV}, "eventos_falsos": [${EV}], "verdad": "..."}`;
+const FORMA_VEREDICTO = `{"acusado": "...", "razones": ["...", "..."], "frase": "..."}`;
 
 const TONOS = {
-  absurdo: "humor absurdo y ligero, crímenes ridículos e inofensivos (nada de violencia real)",
-  noir: "novela negra clásica narrada con ironía, sin violencia gráfica",
+  absurdo: "humor absurdo y ligero, travesuras ridículas e inofensivas",
+  noir: "novela negra clásica narrada con ironía, sin violencia",
   picante: "humor pícaro para adultos entre amigos, atrevido pero sin contenido sexual explícito ni humillaciones",
 };
 
@@ -127,95 +127,60 @@ export async function probarConexion({ apiKey, modelo }) {
 }
 
 /**
- * Pide a la IA el «material» de un caso: el crimen, los lugares y el dato secreto.
- * Las cartas las reparte después el motor (armarCasoIA) para que nunca se contradigan.
+ * Pide a la IA el material de un caso: el crimen, los lugares y el secreto de la noche.
+ * Las cartas las reparte el motor (armarCaso), así nunca se contradicen.
  */
-export async function generarCasoIA({ apiKey, modelo, jugadores, culpable, ambientacion, tono = "absurdo", titulosUsados = [] }) {
-  const system = `Eres el guionista de «Coartada», un juego de fiesta en español donde un grupo de amigos busca al culpable de un «crimen» cómico. Escribes en español latino neutro, tuteando, con frases cortas que se leen bien en voz alta desde un teléfono.
+export async function generarCasoIA({ apiKey, modelo, jugadores, ambientacion, tono = "absurdo", titulosUsados = [] }) {
+  const system = `Eres el guionista de «Coartada», un juego de fiesta en español. Escribes en español latino neutro, con frases cortas y graciosas que se leen de un vistazo en un teléfono.
 
-Cómo funciona el juego, para que tu caso sea jugable:
-- Hay un culpable y el resto son inocentes. El juego reparte a cada inocente uno de tus lugares y una de sus actividades, y le dice a quién vio. Tú no escribes esas cartas: solo das los lugares y las actividades.
-- Todos los inocentes conocen un «evento secreto»: algo llamativo que pasó esa noche y que cualquiera presente, en cualquiera de los lugares, habría notado (un ruido, un apagón, un olor, algo que se ve desde todas partes). El culpable no lo conoce porque estaba ocupado. En el interrogatorio se pregunta por él con rodeos, así que debe ser concreto, sensorial y dar tema de conversación.
-- El culpable recibe una coartada falsa: un lugar apartado donde no había nadie y una actividad creíble.
-- Al final el culpable intenta adivinar el evento secreto entre seis opciones, así que necesitas cinco eventos falsos igual de creíbles, del mismo estilo y bien distintos entre sí.
+Cómo funciona, para que tu caso sea jugable:
+- Hay un culpable de una travesura cómica y el resto son inocentes. El juego reparte a cada inocente uno de tus lugares.
+- Todos los inocentes presenciaron «el secreto»: algo llamativo que pasó esa noche y que cualquiera habría notado desde cualquier lugar. El culpable no lo sabe.
+- El juego pregunta a todos con qué sentido lo notaron y cómo reaccionó la gente, y pide una palabra que lo insinúe sin decirlo. Por eso cada secreto lleva: el sentido principal, la reacción principal y 5 palabras sueltas que lo sugieren sin repetir ninguna palabra de su texto.
+- Al final el culpable intenta adivinar el secreto entre seis opciones: el verdadero y cinco falsos igual de creíbles. Entre los seis deben repartirse sentidos y reacciones distintos, para que las respuestas den pistas.
 
-Tono: ${TONOS[tono] || TONOS.absurdo}. El «crimen» es siempre una travesura o un robo cómico; no impliques a los jugadores en violencia, delitos graves ni nada humillante, porque son personas reales jugando entre amigos.`;
+Tono: ${TONOS[tono] || TONOS.absurdo}. Nada de violencia, delitos graves ni cosas humillantes: los jugadores son personas reales entre amigos. No nombres a ningún jugador en el relato.`;
   const user = `Jugadores: ${jugadores.join(", ")}.
-Culpable de este caso: ${culpable}.
 Ambientación pedida por el grupo: ${ambientacion && ambientacion.trim() ? ambientacion.trim() : "sorpréndenos con un lugar original"}.
 ${titulosUsados.length ? "Casos ya jugados hoy, no los repitas: " + titulosUsados.join("; ") + "." : ""}
 
 Campos:
-- titulo: estilo «El caso de…».
-- relato: 2 o 3 frases para leer en voz alta. Cuenta qué pasó y en qué lugar, con un detalle gracioso. No insinúes quién fue ni menciones el evento secreto.
-- lugar_crimen: con artículo y en minúscula, por ejemplo «la cocina». Debe coincidir con el relato.
-- hora: por ejemplo «10:30 de la noche».
-- pistas: 2 pistas físicas halladas en el lugar, sugerentes, que no señalen a nadie.
-- lugares: exactamente 7 lugares de la ambientación, distintos entre sí, del lugar del crimen y del de la coartada falsa. Cada nombre con artículo y en minúscula («el patio»). Cada uno con 2 actividades concretas y graciosas en gerundio y segunda persona, que completen «Estabas en el patio, …» (por ejemplo «peleando con la bocina para poner música»). No nombres a ningún jugador en las actividades.
-- coartada_falsa: otro lugar distinto (con artículo, en minúscula) y una actividad en gerundio, para ${culpable}.
-- evento_secreto: completa «Esa noche…» sin repetir esas dos palabras, en minúscula y sin punto final, por ejemplo «se fue la luz diez segundos y alguien gritó». No debe tener relación con el crimen.
-- eventos_falsos: exactamente 5, con el mismo formato.
-- verdad: 2 frases que revelan al final cómo lo hizo ${culpable} y que mintió diciendo que estaba en el lugar de la coartada falsa.`;
+- emoji: un emoji del objeto de la travesura.
+- titulo: estilo «El caso de…», máximo 7 palabras.
+- relato: máximo 2 frases cortas. Qué pasó y en qué lugar, con un detalle gracioso. No menciones el secreto.
+- lugar_crimen: nombre con artículo y en minúscula («la cocina») y un emoji.
+- lugares: exactamente 8 lugares más de la ambientación, distintos entre sí y del lugar del crimen, cada uno con artículo, en minúscula, máximo 3 palabras, y un emoji.
+- evento_secreto: texto que completa «Esa noche…» en minúscula, sin punto y de máximo 10 palabras (ejemplo: «se fue la luz y todo quedó a oscuras»); un emoji; sentido; reaccion; y 5 palabras sueltas (una sola palabra cada una).
+- eventos_falsos: exactamente 5, con el mismo formato, bien distintos entre sí y del verdadero.
+- verdad: 1 o 2 frases que cuentan cómo lo hizo el culpable; escribe {culpable} donde va su nombre.`;
   return pedirJSON({ apiKey, modelo, system, user, forma: FORMA_CASO, esfuerzo: "medium", maxTokens: 6000, temperatura: 1 });
 }
 
-const SYSTEM_DETECTIVE = `Eres el Detective, el interrogador de «Coartada», un juego de fiesta en español. Un grupo de amigos tiene un culpable escondido y tú lo buscas: alguien lee tus preguntas en voz alta desde un teléfono y el interrogado responde delante de todos.
+/** La IA redacta el veredicto del detective a partir del tablero de pruebas. */
+export async function veredictoIA({ apiKey, modelo, caso, jugadores, pruebas, base }) {
+  const nombre = (id) => (jugadores.find((j) => j.id === id) || {}).nombre || "?";
+  const lugar = (i) => (caso.lugares[i] ? caso.lugares[i].n : "?");
+  const avalados = (pruebas.analisis && pruebas.analisis.avalados) || [];
+  const filas = jugadores.map((j) => {
+    const d = pruebas.r1[j.id] || {};
+    return `- ${j.nombre}: dice que estaba en ${lugar(d.lugar)}${d.vio ? ` y que vio a ${nombre(d.vio)} en ${lugar(d.vioLugar)}` : " y que no vio a nadie"}. ${avalados.includes(j.id) ? "Alguien confirma dónde estaba." : "Nadie confirma dónde estaba."} Sobre «eso» respondió «${pruebas.r2[j.id] || "nada"}». Su palabra clave: «${pruebas.r3[j.id] || "ninguna"}».`;
+  }).join("\n");
+  const choques = ((pruebas.analisis && pruebas.analisis.choques) || []).map((c) => c.tipo === "lugar" ? `${nombre(c.a)} dice que vio a ${nombre(c.b)} en ${lugar(c.lugar)}, pero ${nombre(c.b)} dice otra cosa.` : `${nombre(c.a)} y ${nombre(c.b)} dicen que estaban en ${lugar(c.lugar)} y no se vieron.`).join(" ") || "Ninguno.";
+  const system = `Eres el Detective de «Coartada», un juego de fiesta en español: detective de novela negra con humor seco, que tutea y habla en frases cortas. Tienes las pruebas de la noche y debes acusar a un sospechoso.
 
-Lo que sabes: el caso público, las pistas y un «evento secreto» que todos los inocentes presenciaron y el culpable no. No sabes quién es el culpable; lo deduces de las respuestas. Los inocentes tienen prohibido nombrar el evento secreto, solo pueden aludirlo, así que no cuenta en su contra que hablen de él con rodeos; sí es sospechoso quien dice que no pasó nada raro, quien lo describe mal o quien esquiva el tema.
+Conoces el secreto que presenciaron los inocentes, pero el culpable todavía puede intentar adivinarlo: no lo nombres, no lo describas y no uses sus palabras. Refiérete a él solo como «eso».`;
+  const user = `Caso: ${caso.titulo}. ${caso.relato}
+El secreto (solo para ti): esa noche ${caso.evento.t}. Se notó con: ${caso.evento.s}. Reacción general: ${caso.evento.r}.
 
-Regla que no puedes romper: en tus preguntas y en tu informe nunca nombres ni describas el evento secreto, ni uses sus palabras. Si lo haces, el culpable lo copia y el juego se arruina. Refiérete a él solo como «eso que pasó» o «el momento que todos recuerdan».
+Pruebas:
+${filas}
+Choques entre versiones: ${choques}
 
-Tu estilo: detective de novela negra con humor seco, tuteando, en español latino neutro. Frases cortas para leer en voz alta. Las respuestas que recibes son resúmenes escritos o dictados a toda prisa: tolera faltas y lenguaje informal, y no inventes cosas que nadie dijo.`;
-
-const publico = (caso) => `Caso: ${caso.titulo}. ${caso.relato}
-Lugar del hecho: ${caso.lugar_crimen}. Hora: ${caso.hora}.
-Pistas: ${caso.pistas.join(" | ") || "ninguna"}.
-Evento secreto (solo para ti; nunca lo escribas): esa noche ${caso.evento_secreto}.`;
-
-const transcripcion = (entradas) => entradas.map((e) => `[Ronda ${e.ronda}] Detective a ${e.jugador}: ${e.pregunta}\n${e.jugador}: ${e.respuesta && e.respuesta.trim() ? e.respuesta.trim() : "(respondió en voz alta, sin dejar nota)"}`).join("\n\n");
-
-const norm = (s) => String(s).trim().toLowerCase();
-
-/** Devuelve {jugador: pregunta}. Se descartan las preguntas que delatan el dato secreto. */
-export async function preguntasIA({ apiKey, modelo, caso, jugadores, entradas, ronda, ultima }) {
-  const user = `${publico(caso)}
-
-Sospechosos: ${jugadores.join(", ")}.
-
-Interrogatorio hasta ahora:
-${transcripcion(entradas)}
-
-Escribe la pregunta de la ronda ${ronda} para cada sospechoso: exactamente una por persona, con su nombre tal como aparece. Cada pregunta se apoya en lo que esa persona u otra ya dijo: cruza dos versiones, pide el detalle que falta o tantea con rodeos si de verdad vivió «eso que pasó». A quien no dejó nota, pídele que repita su coartada con un detalle comprobable. ${ultima ? "Es la última ronda: aprieta donde más dudes." : ""} Una sola pregunta por persona, de 25 palabras como máximo, sin dar por hecho nada que nadie haya dicho.`;
-  const r = await pedirJSON({ apiKey, modelo, system: SYSTEM_DETECTIVE, user, forma: FORMA_PREGUNTAS, esfuerzo: "medium", maxTokens: 4000, temperatura: 0.8 });
-  const out = {};
-  for (const j of jugadores) {
-    const p = (Array.isArray(r.preguntas) ? r.preguntas : []).find((x) => x && norm(x.jugador) === norm(j));
-    if (p && typeof p.pregunta === "string" && p.pregunta.trim() && !delataEvento(p.pregunta, caso.evento_secreto)) out[j] = p.pregunta.trim();
-  }
-  return out;
-}
-
-export async function veredictoIA({ apiKey, modelo, caso, jugadores, entradas }) {
-  const user = `${publico(caso)}
-
-Sospechosos: ${jugadores.join(", ")}.
-
-Interrogatorio completo:
-${transcripcion(entradas)}
-
-Dicta tu veredicto:
-- informe: 3 o 4 frases para leer en voz alta, repasando lo que te llamó la atención de las respuestas. No reveles el evento secreto: el culpable todavía puede intentar adivinarlo.
-- contradicciones: hasta 3 frases cortas, cada una con una contradicción real entre dos versiones o una respuesta floja, diciendo de quién. Si no hay ninguna clara, lista vacía.
-- acusado: el nombre exacto de un sospechoso. Elige uno aunque dudes.
-- frase_final: una frase dramática de acusación dirigida a esa persona.`;
-  const r = await pedirJSON({ apiKey, modelo, system: SYSTEM_DETECTIVE, user, forma: FORMA_VEREDICTO, esfuerzo: "high", maxTokens: 5000, temperatura: 0.6 });
-  const acusado = jugadores.find((j) => norm(j) === norm(r.acusado)) || null;
-  if (!acusado) throw new ErrorIA("El detective no supo a quién acusar.", "formato");
-  const limpio = (t) => typeof t === "string" && t.trim() && !delataEvento(t, caso.evento_secreto);
-  return {
-    informe: limpio(r.informe) ? r.informe.trim() : "Escuché todas las versiones. Hay una que no encaja con lo que pasó esa noche.",
-    contradicciones: (Array.isArray(r.contradicciones) ? r.contradicciones : []).filter(limpio).slice(0, 3),
-    acusado,
-    frase_final: limpio(r.frase_final) ? r.frase_final.trim() : `${acusado}, tu historia es la que menos me convence.`,
-  };
+Elige a quién acusas (el nombre exacto de un sospechoso), da 2 o 3 razones cortas basadas solo en estas pruebas (máximo 14 palabras cada una) y una frase final dramática dirigida a esa persona.`;
+  const r = await pedirJSON({ apiKey, modelo, system, user, forma: FORMA_VEREDICTO, esfuerzo: "medium", maxTokens: 3000, temperatura: 0.7 });
+  const acusado = jugadores.find((j) => j.nombre.toLowerCase() === String(r.acusado || "").trim().toLowerCase());
+  if (!acusado) return null;
+  const limpio = (t) => typeof t === "string" && t.trim() && !delataEvento(t, caso.evento.t);
+  const razones = (Array.isArray(r.razones) ? r.razones : []).filter(limpio).map((t) => t.trim().slice(0, 140)).slice(0, 3);
+  return { acusado: acusado.id, razones: razones.length ? razones : base.razones, frase: limpio(r.frase) ? r.frase.trim().slice(0, 160) : `${acusado.nombre}, todas las pistas llevan a ti.` };
 }

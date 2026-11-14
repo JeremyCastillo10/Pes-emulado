@@ -1,216 +1,155 @@
-// Banco de contenido para el modo Clásico (sin internet).
-// Cada escenario genera cientos de casos distintos al combinarse.
+// Archivo de casos. Cada escenario combina lugares, crímenes y «secretos» de la noche.
+// Evento: t = texto, e = emoji, s = sentido con que se notó, r = reacción de la gente,
+// p = palabras que lo insinúan sin decirlo (las usan los bots).
+
+export const SENTIDOS = [
+  { k: "vista", e: "👀", t: "Lo vi" },
+  { k: "oido", e: "👂", t: "Lo oí" },
+  { k: "olfato", e: "👃", t: "Lo olí" },
+  { k: "tacto", e: "🖐️", t: "Lo sentí" },
+];
+export const REACCIONES = [
+  { k: "risa", e: "😂", t: "Risas" },
+  { k: "susto", e: "😱", t: "Sustos" },
+  { k: "enojo", e: "😡", t: "Enojo" },
+  { k: "asombro", e: "😲", t: "Asombro" },
+];
+export const PREGUNTAS_R2 = {
+  sentido: { titulo: "¿Cómo notaste «eso» primero?", opciones: SENTIDOS },
+  reaccion: { titulo: "¿Cómo reaccionó la gente con «eso»?", opciones: REACCIONES },
+};
+// Palabras de quien no sabe nada e intenta no mojarse.
+export const VAGAS = ["raro", "caos", "locura", "sorpresa", "inolvidable", "drama", "momento", "intenso", "increíble", "desastre"];
+
+const L = (n, e) => ({ n, e });
+const C = (e, titulo, relato) => ({ e, titulo, relato });
+const E = (t, e, s, r, p) => ({ t, e, s, r, p });
 
 export const ESCENARIOS = [
   {
-    id: "asado",
-    nombre: "El asado",
-    emoji: "🔥",
-    ambiente: "un asado en casa de un amigo",
-    lugares: [
-      { n: "la cocina", acts: ["cortando limones para las bebidas", "buscando hielo en el congelador"] },
-      { n: "el patio", acts: ["avivando el fuego de la parrilla", "acomodando las sillas plásticas"] },
-      { n: "la sala", acts: ["peleando con la bocina para poner música", "viendo los goles en la tele"] },
-      { n: "el balcón", acts: ["hablando por teléfono con tu mamá", "tomando aire porque comiste demasiado"] },
-      { n: "el garaje", acts: ["buscando más carbón entre cajas viejas", "sacando la nevera portátil"] },
-      { n: "la terraza", acts: ["colgando unas luces que se habían caído", "mirando las estrellas con un vaso en la mano"] },
-      { n: "el baño de visitas", acts: ["tratando de quitarte una mancha de salsa de la camisa", "esperando a que se desocupara"] },
-      { n: "la entrada", acts: ["recibiendo al del delivery que traía el pan", "fumando al lado del portón"] },
-    ],
+    id: "asado", nombre: "El asado", emoji: "🔥", ambiente: "un asado en casa de un amigo",
+    lugares: [L("la cocina", "🍳"), L("el patio", "🌿"), L("la sala", "🛋️"), L("el balcón", "🌙"), L("el garaje", "🚗"), L("la terraza", "✨"), L("el baño", "🚿"), L("la entrada", "🚪"), L("la piscina", "🏊")],
     crimenes: [
-      { titulo: "El caso de la picaña desaparecida", relato: "La picaña estrella de la noche, tres kilos marinados desde ayer, desapareció de {lugar}. Solo quedó la bandeja vacía y un rastro de jugo.", pistas: ["La bandeja apareció escondida detrás de una maceta.", "Había huellas de grasa en el pomo de una puerta."] },
-      { titulo: "El caso del postre profanado", relato: "Alguien se comió medio tres leches que estaba reservado para el final. Lo dejaron en {lugar} con una cuchara clavada como bandera.", pistas: ["La cuchara no era de la casa: era de plástico.", "Había migas que llevaban hacia el pasillo."] },
-      { titulo: "El caso de la playlist saboteada", relato: "En plena fiesta, alguien entró a {lugar} y cambió la playlist por tres horas de flauta andina. El celular del anfitrión quedó bloqueado.", pistas: ["El celular tenía la pantalla llena de salsa barbacoa.", "Alguien dejó un vaso a medio tomar junto al equipo."] },
+      C("🥩", "El caso de la picaña desaparecida", "Tres kilos de picaña marinada desde ayer se esfumaron de {lugar}. Solo quedó la bandeja vacía."),
+      C("🍰", "El caso del postre profanado", "Alguien se comió medio tres leches reservado para el final y dejó la cuchara clavada como bandera en {lugar}."),
+      C("🎵", "El caso de la playlist saboteada", "Alguien entró a {lugar}, cambió la música por tres horas de flauta andina y bloqueó el celular del anfitrión."),
     ],
     eventos: [
-      "se fue la luz unos diez segundos y todo quedó a oscuras",
-      "el perro del vecino aulló como lobo durante un minuto entero",
-      "se escuchó un estruendo: alguien tumbó la torre de vasos",
-      "cayó un aguacero repentino que duró apenas dos minutos",
-      "sonó la alarma de un carro y nadie la apagaba",
-      "la bocina se trabó y repitió la misma frase de una canción veinte veces",
+      E("se fue la luz y todo quedó a oscuras", "💡", "vista", "susto", ["velas", "linterna", "negro", "tropezón", "fusible", "ciegos"]),
+      E("el perro del vecino aulló como lobo", "🐺", "oido", "risa", ["luna", "colmillos", "coro", "mascota", "escalofrío", "serenata"]),
+      E("alguien tumbó la torre de vasos", "🥤", "oido", "susto", ["estruendo", "vidrios", "dominó", "escoba", "torpeza", "añicos"]),
+      E("cayó un aguacero repentino", "🌧️", "tacto", "enojo", ["mojados", "paraguas", "charcos", "carrera", "goteras", "nubes"]),
+      E("se quemó la carne y la casa se llenó de humo", "🔥", "olfato", "enojo", ["chamuscado", "tos", "ventanas", "carbón", "alarma", "ceniza"]),
+      E("explotó una botella de refresco agitada", "🍾", "vista", "risa", ["espuma", "pegajoso", "géiser", "burbujas", "techo", "ducha"]),
     ],
   },
   {
-    id: "boda",
-    nombre: "La boda",
-    emoji: "💍",
-    ambiente: "la boda de una prima lejana",
-    lugares: [
-      { n: "la pista de baile", acts: ["bailando un merengue con una tía desconocida", "intentando la coreografía del momento"] },
-      { n: "la mesa de dulces", acts: ["llenándote los bolsillos de bombones", "tomándole fotos al pastel"] },
-      { n: "la barra", acts: ["esperando un trago que nunca llegaba", "discutiendo con el bartender sobre el hielo"] },
-      { n: "el jardín", acts: ["posando para el fotógrafo junto a la fuente", "caminando sin zapatos porque te dolían los pies"] },
-      { n: "el parqueo", acts: ["buscando el cargador en el carro", "ayudando a un tío a estacionarse"] },
-      { n: "la capilla", acts: ["recogiendo el abrigo que habías olvidado", "tomándote una foto en el altar vacío"] },
-      { n: "el salón de regalos", acts: ["dejando tu sobre en la caja", "leyendo las tarjetas ajenas por curiosidad"] },
-      { n: "el pasillo de los baños", acts: ["haciendo fila mientras revisabas el celular", "arreglándote el peinado frente al espejo"] },
-    ],
+    id: "boda", nombre: "La boda", emoji: "💍", ambiente: "la boda de una prima lejana",
+    lugares: [L("la pista de baile", "💃"), L("la mesa de dulces", "🍬"), L("la barra", "🍸"), L("el jardín", "🌷"), L("el parqueo", "🅿️"), L("la capilla", "⛪"), L("el salón de regalos", "🎁"), L("el pasillo", "🪞"), L("la cabina de fotos", "📸")],
     crimenes: [
-      { titulo: "El caso del pastel mordido", relato: "Antes del corte oficial, el pastel de cinco pisos amaneció con un mordisco enorme en el segundo nivel. Fue visto por última vez intacto en {lugar}.", pistas: ["Había merengue en una servilleta de tela tirada cerca.", "El muñequito del novio apareció decapitado."] },
-      { titulo: "El caso del sobre vacío", relato: "La caja de sobres con los regalos en efectivo apareció abierta en {lugar}. Falta el sobre más gordo: el del padrino.", pistas: ["El lazo de la caja estaba cortado con algo sin filo.", "Alguien dejó caer una flor del ramo cerca de la caja."] },
-      { titulo: "El caso del discurso robado", relato: "El padrino iba a leer su discurso y descubrió que alguien lo cambió por la letra de una bachata. Las hojas originales estaban en {lugar}.", pistas: ["Las hojas falsas estaban impresas, no escritas a mano.", "El saco del padrino estuvo colgado sin vigilancia."] },
+      C("🎂", "El caso del pastel mordido", "Antes del corte oficial, el pastel de cinco pisos apareció en {lugar} con un mordisco enorme en el segundo nivel."),
+      C("✉️", "El caso del sobre vacío", "La caja de regalos en efectivo apareció abierta en {lugar}. Falta el sobre más gordo: el del padrino."),
+      C("📜", "El caso del discurso cambiado", "El padrino abrió su discurso en {lugar} y encontró la letra de una bachata. Alguien cambió las hojas."),
     ],
     eventos: [
-      "al DJ se le fue el audio y hubo un silencio incómodo larguísimo",
-      "un tío borracho agarró el micrófono y cantó a capela",
-      "se apagaron todas las luces justo cuando entraban los novios",
-      "un niño tumbó la torre de copas de champán",
-      "la novia gritó porque una paloma se metió al salón",
-      "empezaron los fuegos artificiales antes de tiempo",
+      E("al DJ se le fue el audio y hubo un silencio eterno", "🔇", "oido", "asombro", ["grillos", "incómodo", "mudo", "pausa", "cables", "vacío"]),
+      E("un tío borracho agarró el micrófono y cantó", "🎤", "oido", "risa", ["ranchera", "desafinado", "vergüenza", "karaoke", "aplausos", "gallo"]),
+      E("un niño tumbó la torre de copas de champán", "🥂", "vista", "susto", ["cristales", "cascada", "travieso", "trapeador", "dominó", "brindis"]),
+      E("una paloma se metió al salón y voló sobre las mesas", "🕊️", "vista", "risa", ["plumas", "alas", "pájaro", "persecución", "peinados", "aleteo"]),
+      E("los fuegos artificiales empezaron antes de tiempo", "🎆", "vista", "asombro", ["chispas", "cielo", "colores", "pólvora", "adelantados", "estallidos"]),
+      E("se regó un perfume entero y no se podía respirar", "🌸", "olfato", "enojo", ["frasco", "estornudos", "empalagoso", "mareo", "flores", "nariz"]),
     ],
   },
   {
-    id: "oficina",
-    nombre: "La oficina",
-    emoji: "🗂️",
-    ambiente: "la fiesta de fin de año de la oficina",
-    lugares: [
-      { n: "la sala de reuniones", acts: ["inflando globos para la decoración", "probando el karaoke con el proyector"] },
-      { n: "la cocineta", acts: ["calentando pastelitos en el microondas", "peleando con la cafetera"] },
-      { n: "la recepción", acts: ["firmando la lista del amigo secreto", "recibiendo las pizzas"] },
-      { n: "el cuarto de impresoras", acts: ["imprimiendo los cartones del bingo", "buscando tape para pegar adornos"] },
-      { n: "la azotea", acts: ["tomando aire lejos del karaoke", "grabando un video del atardecer"] },
-      { n: "el almacén", acts: ["buscando vasos desechables", "bajando la caja del arbolito"] },
-      { n: "el ascensor", acts: ["subiendo las neveritas desde el parqueo", "atrapado entre dos pisos por un rato"] },
-      { n: "la oficina del jefe", acts: ["dejando un regalo sobre el escritorio", "usando su silla ergonómica a escondidas"] },
-    ],
+    id: "oficina", nombre: "La oficina", emoji: "🗂️", ambiente: "la fiesta de fin de año de la oficina",
+    lugares: [L("la sala de reuniones", "📊"), L("la cocineta", "☕"), L("la recepción", "🛎️"), L("el cuarto de impresoras", "🖨️"), L("la azotea", "🏙️"), L("el almacén", "📦"), L("el ascensor", "🛗"), L("la oficina del jefe", "💼"), L("el parqueo", "🚙")],
     crimenes: [
-      { titulo: "El caso del regalo intercambiado", relato: "El regalo del jefe para el amigo secreto, un reloj carísimo, fue cambiado por un par de medias usadas. La caja estaba en {lugar}.", pistas: ["El papel de regalo fue pegado de nuevo con grapas.", "Las medias tenían un logo de un gimnasio cercano."] },
-      { titulo: "El caso del correo a toda la empresa", relato: "Desde una computadora en {lugar}, alguien envió a toda la empresa un correo con el asunto «Renuncio y me voy a vender empanadas», firmado por el jefe.", pistas: ["El teclado quedó pegajoso de refresco.", "El correo tenía tres faltas de ortografía muy particulares."] },
-      { titulo: "El caso de la nevera saqueada", relato: "Todos los almuerzos con nombre desaparecieron de la nevera. Los envases vacíos aparecieron apilados en {lugar}.", pistas: ["Solo dejaron intacta una ensalada.", "Había un tenedor con iniciales rayadas."] },
+      C("⌚", "El caso del regalo cambiado", "El reloj carísimo del amigo secreto fue cambiado por un par de medias usadas. La caja estaba en {lugar}."),
+      C("📧", "El caso del correo a toda la empresa", "Desde una computadora en {lugar} salió un correo firmado por el jefe: «Renuncio y me voy a vender empanadas»."),
+      C("🥡", "El caso de la nevera saqueada", "Todos los almuerzos con nombre desaparecieron. Los envases vacíos aparecieron apilados en {lugar}."),
     ],
     eventos: [
-      "sonó la alarma de incendios por error durante un minuto",
-      "el jefe cantó una ranchera en el karaoke y desafinó horrible",
-      "se cayó el arbolito con todo y luces",
-      "se fue el internet y todos gritaron al mismo tiempo",
-      "explotó una botella de sidra y bañó el techo",
-      "el de seguridad subió a pedir que bajaran el volumen",
+      E("sonó la alarma de incendios por error", "🚨", "oido", "susto", ["sirena", "evacuación", "bomberos", "oídos", "pánico", "simulacro"]),
+      E("el jefe cantó en el karaoke y desafinó horrible", "🎙️", "oido", "risa", ["gallos", "vergüenza", "ranchera", "aplausos", "grabaciones", "micrófono"]),
+      E("se cayó el arbolito con todo y luces", "🎄", "vista", "asombro", ["esferas", "enredo", "cables", "navidad", "derrumbe", "estrella"]),
+      E("se fue el internet y todos gritaron a la vez", "📶", "vista", "enojo", ["router", "señal", "desconectados", "dinosaurio", "cargando", "caída"]),
+      E("explotó una botella de sidra y bañó el techo", "🍾", "vista", "risa", ["corcho", "espuma", "lluvia", "pegajoso", "burbujas", "ducha"]),
+      E("alguien calentó pescado en el microondas", "🐟", "olfato", "enojo", ["mar", "ventanas", "peste", "almuerzo", "narices", "delito"]),
     ],
   },
   {
-    id: "camping",
-    nombre: "El campamento",
-    emoji: "⛺",
-    ambiente: "un fin de semana de campamento en la montaña",
-    lugares: [
-      { n: "la fogata", acts: ["tostando malvaviscos hasta quemarlos", "contando una historia de terror malísima"] },
-      { n: "el río", acts: ["lavando los platos con agua helada", "llenando las cantimploras"] },
-      { n: "la casa de campaña grande", acts: ["inflando un colchón que no dejaba de desinflarse", "buscando tu linterna en la mochila"] },
-      { n: "el mirador", acts: ["tratando de agarrar señal en el celular", "tomando fotos de la luna"] },
-      { n: "la camioneta", acts: ["cargando el celular con el encendedor", "buscando el repelente en la guantera"] },
-      { n: "el sendero", acts: ["recogiendo leña seca", "siguiendo a una luciérnaga como un niño"] },
-      { n: "la hamaca", acts: ["durmiendo una siesta que se te fue de las manos", "leyendo con una linternita en la frente"] },
-      { n: "la mesa de picnic", acts: ["armando sándwiches para todos", "jugando dominó contra ti mismo"] },
-    ],
+    id: "camping", nombre: "El campamento", emoji: "⛺", ambiente: "un campamento en la montaña",
+    lugares: [L("la fogata", "🔥"), L("el río", "🏞️"), L("la carpa grande", "⛺"), L("el mirador", "🔭"), L("la camioneta", "🛻"), L("el sendero", "🥾"), L("la hamaca", "🌴"), L("la mesa de picnic", "🧺"), L("el muelle", "🎣")],
     crimenes: [
-      { titulo: "El caso de los malvaviscos fantasma", relato: "Las tres bolsas de malvaviscos, únicas provisiones dulces del viaje, desaparecieron de {lugar}. Solo quedó una bolsa rota y un palito chamuscado.", pistas: ["Había un malvavisco aplastado con una huella de chancleta.", "La bolsa fue abierta con los dientes."] },
-      { titulo: "El caso de la carpa desinflada", relato: "Alguien le sacó las estacas a la carpa principal y la dejó hecha un panqueque. Las estacas aparecieron en {lugar}.", pistas: ["Las estacas estaban ordenadas por tamaño, con mucho cuidado.", "Había lodo fresco en el cierre de la carpa."] },
-      { titulo: "El caso del mapa quemado", relato: "El único mapa del sendero apareció medio quemado en {lugar}. Sin él, mañana nadie sabe cómo volver.", pistas: ["El mapa olía a repelente.", "Solo se quemó la parte que marcaba el camino corto."] },
+      C("🍡", "El caso de los malvaviscos fantasma", "Las tres bolsas de malvaviscos desaparecieron de {lugar}. Solo quedó un palito chamuscado."),
+      C("🏕️", "El caso de la carpa desinflada", "Alguien sacó las estacas de la carpa principal y la dejó hecha un panqueque. Las estacas aparecieron en {lugar}."),
+      C("🗺️", "El caso del mapa quemado", "El único mapa del sendero apareció medio quemado en {lugar}. Mañana nadie sabe cómo volver."),
     ],
     eventos: [
-      "se escuchó un aullido lejano que dejó a todos helados",
-      "pasó una estrella fugaz enorme y alguien gritó",
-      "la fogata tronó fuerte y saltaron chispas por todos lados",
-      "una vaca apareció de la nada y cruzó el campamento",
-      "empezó una llovizna que duró un par de minutos",
-      "se apagaron todas las linternas a la vez sin explicación",
+      E("se escuchó un aullido lejano que heló a todos", "🐺", "oido", "susto", ["lobo", "luna", "escalofrío", "bosque", "silencio", "manada"]),
+      E("pasó una estrella fugaz enorme", "🌠", "vista", "asombro", ["deseo", "cielo", "cometa", "destello", "rápida", "brillo"]),
+      E("una vaca apareció de la nada y cruzó el campamento", "🐄", "vista", "risa", ["cuernos", "leche", "visita", "cencerro", "pasto", "intrusa"]),
+      E("empezó a llover y se mojaron los sacos de dormir", "🌧️", "tacto", "enojo", ["empapados", "goteras", "frío", "nubes", "charcos", "toallas"]),
+      E("un zorrillo pasó cerca y dejó su recuerdo", "🦨", "olfato", "enojo", ["peste", "narices", "rayas", "huida", "tomate", "apestoso"]),
+      E("tembló la tierra unos segundos", "🫨", "tacto", "susto", ["sacudida", "suelo", "réplica", "piedras", "mareo", "vibración"]),
     ],
   },
   {
-    id: "crucero",
-    nombre: "El crucero",
-    emoji: "🚢",
-    ambiente: "un crucero barato por el Caribe",
-    lugares: [
-      { n: "el buffet", acts: ["haciendo una montaña de camarones en tu plato", "esperando que repusieran el flan"] },
-      { n: "la piscina", acts: ["flotando en un donut inflable", "peleando por una tumbona"] },
-      { n: "el casino", acts: ["perdiendo monedas en las tragamonedas", "mirando jugar póker sin entender nada"] },
-      { n: "la cubierta superior", acts: ["mareado, agarrado de la baranda", "buscando delfines con unos binoculares"] },
-      { n: "el teatro", acts: ["viendo el show de un mago bastante malo", "ensayando para el concurso de talentos"] },
-      { n: "el gimnasio", acts: ["caminando en la trotadora para bajar el buffet", "tomándote fotos frente al espejo"] },
-      { n: "la tienda de recuerdos", acts: ["probándote sombreros de capitán", "regateando por un imán de nevera"] },
-      { n: "el pasillo de camarotes", acts: ["perdido buscando tu puerta", "esperando al de limpieza para pedir toallas"] },
-    ],
+    id: "crucero", nombre: "El crucero", emoji: "🚢", ambiente: "un crucero barato por el Caribe",
+    lugares: [L("el buffet", "🍤"), L("la piscina", "🏊"), L("el casino", "🎰"), L("la cubierta", "⚓"), L("el teatro", "🎭"), L("el gimnasio", "🏋️"), L("la tienda", "🛍️"), L("el pasillo", "🚪"), L("el spa", "🧖")],
     crimenes: [
-      { titulo: "El caso de la gorra del capitán", relato: "La gorra oficial del capitán desapareció minutos antes de la cena de gala. Fue vista por última vez sobre una mesa en {lugar}.", pistas: ["Encontraron un pelo teñido dentro de la vitrina.", "Alguien se tomó una selfie con la gorra y borró la foto."] },
-      { titulo: "El caso del pulpo liberado", relato: "El pulpo del acuario decorativo apareció nadando en la piscina de niños. El tanque, que estaba en {lugar}, tenía la tapa abierta.", pistas: ["Había un rastro de agua salada por la alfombra.", "La tapa fue abierta con una tarjeta de camarote."] },
-      { titulo: "El caso del bingo amañado", relato: "Alguien cambió las bolas del bingo y salió el mismo número siete veces seguidas. La tómbola se guardaba en {lugar}.", pistas: ["Las bolas falsas estaban pintadas con esmalte de uñas.", "El premio mayor era un spa para dos."] },
+      C("🧢", "El caso de la gorra del capitán", "La gorra oficial del capitán desapareció minutos antes de la cena de gala. Estaba sobre una mesa en {lugar}."),
+      C("🐙", "El caso del pulpo liberado", "El pulpo del acuario apareció nadando en la piscina de niños. El tanque, en {lugar}, tenía la tapa abierta."),
+      C("🎱", "El caso del bingo amañado", "Alguien cambió las bolas del bingo y salió el mismo número siete veces. La tómbola se guardaba en {lugar}."),
     ],
     eventos: [
-      "el barco dio un bandazo y todo se inclinó de golpe",
-      "sonó la bocina del barco tan fuerte que todos saltaron",
-      "anunciaron por altavoz un simulacro de emergencia",
-      "pasó un grupo de delfines y la gente corrió a la baranda",
-      "se cortó la música y se oyó al capitán estornudar por el altavoz",
-      "una ola enorme salpicó hasta la cubierta",
+      E("el barco dio un bandazo y todo se inclinó", "🌊", "tacto", "susto", ["mareo", "resbalón", "platos", "barandas", "equilibrio", "estómago"]),
+      E("sonó la bocina del barco tan fuerte que todos saltaron", "📯", "oido", "susto", ["trompeta", "oídos", "brinco", "sordera", "puerto", "elefante"]),
+      E("pasó un grupo de delfines junto al barco", "🐬", "vista", "asombro", ["aletas", "saltos", "fotos", "mar", "cámaras", "espectáculo"]),
+      E("el capitán estornudó por el altavoz", "🤧", "oido", "risa", ["salud", "pañuelo", "parlantes", "alergia", "anuncio", "resfriado"]),
+      E("una ola enorme empapó la cubierta", "💦", "tacto", "risa", ["mojados", "sal", "toallas", "chapuzón", "salpicón", "peinados"]),
+      E("se quemaron las palomitas del cine y apestó todo", "🍿", "olfato", "enojo", ["chamuscado", "humo", "maíz", "película", "ventilación", "tos"]),
     ],
   },
   {
-    id: "edificio",
-    nombre: "El edificio",
-    emoji: "🏢",
-    ambiente: "la reunión de vecinos de un edificio",
-    lugares: [
-      { n: "el lobby", acts: ["esperando el ascensor que nunca llega", "leyendo los avisos del mural"] },
-      { n: "la azotea", acts: ["tendiendo ropa a escondidas", "regando las matas de la doña del 4B"] },
-      { n: "el parqueo", acts: ["moviendo tu carro porque estaba mal parqueado", "lavando el parabrisas"] },
-      { n: "el área de la piscina", acts: ["sacando hojas del agua con la malla", "tomando sol en una silla rota"] },
-      { n: "las escaleras", acts: ["subiendo cinco pisos con las compras", "sentado jugando en el celular"] },
-      { n: "el salón de actos", acts: ["acomodando las sillas para la reunión", "probando el micrófono"] },
-      { n: "el cuarto de basura", acts: ["botando tres fundas a la vez", "buscando un arete que se te cayó"] },
-      { n: "la caseta del conserje", acts: ["reclamando un paquete", "chismeando sobre los del 2A"] },
-    ],
+    id: "edificio", nombre: "El edificio", emoji: "🏢", ambiente: "la reunión de vecinos de un edificio",
+    lugares: [L("el lobby", "🛋️"), L("la azotea", "📡"), L("el parqueo", "🚗"), L("la piscina", "🏊"), L("las escaleras", "🪜"), L("el salón de actos", "🪑"), L("el cuarto de basura", "🗑️"), L("la caseta del conserje", "🔑"), L("la lavandería", "🧺")],
     crimenes: [
-      { titulo: "El caso del gnomo secuestrado", relato: "El gnomo de jardín de la presidenta de la junta desapareció de {lugar}. En su lugar dejaron una nota: «Bajen la cuota de mantenimiento».", pistas: ["La nota estaba escrita con letras recortadas de un brochure de pizzería.", "Había tierra en el botón del ascensor."] },
-      { titulo: "El caso del wifi bautizado", relato: "Alguien entró a {lugar}, donde está el router del edificio, y le cambió el nombre al wifi por «El del 3C no paga». La contraseña también cambió.", pistas: ["El router tenía una huella de dedo con chocolate.", "La nueva contraseña es una fecha de cumpleaños."] },
-      { titulo: "El caso de la piñata adelantada", relato: "La piñata del cumpleaños del niño del 5A apareció rota y vacía en {lugar}, un día antes de la fiesta.", pistas: ["No había ni un solo envoltorio de dulce en el piso.", "El palo de la piñata estaba recién lavado."] },
+      C("🧙", "El caso del gnomo secuestrado", "El gnomo de jardín de la presidenta desapareció de {lugar}. Dejaron una nota: «Bajen la cuota de mantenimiento»."),
+      C("📶", "El caso del wifi bautizado", "Alguien entró a {lugar}, donde está el router, y renombró el wifi como «El del 3C no paga»."),
+      C("🪅", "El caso de la piñata adelantada", "La piñata del cumpleaños del 5A apareció rota y vacía en {lugar}, un día antes de la fiesta."),
     ],
     eventos: [
-      "se quedó trancado el ascensor y alguien gritó desde adentro",
-      "se fue el agua en todo el edificio",
-      "el loro del 6B gritó una mala palabra clarísima",
-      "explotó un transformador en la esquina y sonó como un cañonazo",
-      "la alarma del portón se disparó sola",
-      "cayó una maceta desde un piso alto y se hizo trizas en el patio",
+      E("se quedó trancado el ascensor con alguien adentro", "🛗", "oido", "susto", ["encerrado", "botones", "rescate", "gritos", "claustrofobia", "bomberos"]),
+      E("se fue el agua en todo el edificio", "🚰", "tacto", "enojo", ["jabón", "ducha", "cubetas", "sequía", "tubería", "grifo"]),
+      E("el loro del 6B gritó una mala palabra clarísima", "🦜", "oido", "risa", ["plumas", "grosero", "pico", "jaula", "vocabulario", "repetidor"]),
+      E("explotó un transformador en la esquina", "⚡", "vista", "susto", ["chispas", "cañonazo", "poste", "apagón", "destello", "cables"]),
+      E("cayó una maceta desde un piso alto", "🪴", "vista", "asombro", ["tierra", "balcón", "añicos", "suerte", "geranio", "puntería"]),
+      E("alguien quemó arroz y el olor llegó a todos los pisos", "🍚", "olfato", "enojo", ["pegado", "olla", "humo", "almuerzo", "ventanas", "carbón"]),
     ],
   },
 ];
 
-export const HORAS = ["9:40 de la noche", "10:15 de la noche", "8:50 de la noche", "11:05 de la noche", "7:30 de la tarde", "10:45 de la noche"];
-
-// Preguntas del modo Clásico. {otro} = otro jugador al azar. {hora} = hora del hecho.
-export const PREGUNTAS = {
-  r1: [
-    "¿Dónde estabas y qué estabas haciendo exactamente a las {hora}?",
-    "Describe con detalle el lugar donde estabas. ¿Qué tenías en las manos?",
-    "¿Quién puede confirmar dónde estabas? ¿Por qué deberíamos creerle?",
-    "¿A quién viste esa noche y hacia dónde iba?",
-    "Cuéntame tus últimos diez minutos antes de que se descubriera todo.",
-    "¿Cuándo fue la última vez que pasaste cerca de {lugar_crimen}?",
-  ],
-  r2: [
-    "Esa noche pasó algo que nadie olvidará. Sin decir qué fue, ¿cómo reaccionaste?",
-    "Cuando ocurrió «eso» que todos notaron, ¿qué fue lo primero que hiciste?",
-    "Describe con UNA sola palabra lo que pasó esa noche. Solo una.",
-    "«Eso» que pasó… ¿te dio risa, susto o rabia? Explícalo sin revelarlo.",
-    "¿Quién crees que reaccionó peor cuando pasó «aquello»? ¿Por qué?",
-    "Si «eso» hubiera durado más tiempo, ¿qué habría pasado? Cuidado con lo que revelas.",
-    "¿Con qué sentido lo percibiste primero: lo viste, lo oíste o lo sentiste?",
-  ],
-  r3: [
-    "{otro} asegura que te vio con cara de nervios. ¿Qué le respondes?",
-    "Si tuvieras que acusar a alguien ahora mismo, ¿a quién y por qué?",
-    "¿Qué parte de la historia de {otro} no te cuadra?",
-    "Dame una razón concreta por la que tú NO pudiste hacerlo.",
-    "¿Qué habría ganado {otro} haciendo esto? Convénceme.",
-    "Mírame a los ojos: ¿hay algo de lo que dijiste hoy que quieras corregir?",
-  ],
-};
+export const HORAS = ["las 9:40 de la noche", "las 10:15 de la noche", "las 8:50 de la noche", "las 11:05 de la noche", "las 7:30 de la tarde"];
 
 export const VERDADES = [
-  "{culpable} esperó a que nadie mirara, se escabulló hasta {lugar_crimen} y actuó en menos de dos minutos. Después se inventó que estaba en {lugar_falso}.",
-  "Mientras todos estaban distraídos, {culpable} fue directo a {lugar_crimen}. Nadie sospechó porque juró haber estado en {lugar_falso} todo el rato.",
-  "{culpable} lo tenía planeado desde que llegó. Aprovechó el alboroto, pasó por {lugar_crimen} y volvió con cara de inocente diciendo que venía de {lugar_falso}.",
+  "{culpable} esperó a que nadie mirara, se escabulló hasta {lugar_crimen} y actuó en menos de dos minutos.",
+  "Mientras todos estaban distraídos, {culpable} fue directo a {lugar_crimen} y volvió con cara de no haber roto un plato.",
+  "{culpable} lo tenía planeado desde que llegó: aprovechó el alboroto, pasó por {lugar_crimen} y regresó silbando.",
 ];
+
+// Avatares de los jugadores (por orden de llegada) y nombres de bots.
+export const AVATARES = [
+  { e: "🦊", c: "#ff7a3d" }, { e: "🐼", c: "#4cc9f0" }, { e: "🐸", c: "#3ddc97" }, { e: "🦉", c: "#c77dff" },
+  { e: "🐙", c: "#ff5d8f" }, { e: "🦁", c: "#ffd23f" }, { e: "🐵", c: "#f4a261" }, { e: "🐨", c: "#90e0ef" },
+];
+export const NOMBRES_BOT = ["Lupa", "Sabueso", "Rayo", "Tuerca", "Chispa", "Pixel", "Gato", "Cobra", "Nube", "Kiwi"];
+
+// Frases de los bots tras cada revelación. {x} = jugador señalado.
+export const CHARLA = {
+  choque: ["Ese choque entre {x} y {y} me huele mal.", "{x} y {y} no pueden tener razón los dos.", "Anoten: {x} contra {y}. Alguien miente."],
+  sinTestigo: ["A {x} no lo vio nadie…", "Curioso: nadie puede confirmar a {x}.", "{x}, ¿quién te vio a ti?"],
+  raro: ["{x} respondió distinto a todos.", "Mmm, lo de {x} no me cuadra.", "¿De qué noche está hablando {x}?"],
+  palabra: ["«{p}»… ¿en serio, {x}?", "Lo de «{p}» no tiene nada que ver, {x}.", "{x} dijo «{p}». Sospechoso."],
+  calma: ["Todo cuadra… demasiado.", "Aquí alguien miente muy bien.", "Sigo sin tenerlo claro."],
+};

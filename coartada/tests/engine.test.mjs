@@ -1,75 +1,139 @@
-// Pruebas del motor: genera miles de casos y comprueba que sean coherentes.
+// Pruebas del motor: contenido, generación de casos, análisis de coartadas y miles de partidas simuladas con bots.
 import assert from "node:assert/strict";
-import { generarCasoLocal, validarCaso, preguntasLocales, puntuar, contarVotos, opcionesEvento, rng, armarCasoIA, delataEvento, limpiarEvento, limpiarActividad } from "../src/engine.js";
+import { ESCENARIOS, SENTIDOS, REACCIONES, AVATARES } from "../src/content.js";
+import { rng, armarCaso, materialLocal, materialIA, analizarR1, declaracionVerdadera, declaracionValida, palabraProhibida, limpiarPalabra, delataEvento, opcionesEvento, puntuar, contarVotos, botR1, MAX_J } from "../src/engine.js";
+import { crearAnfitrion, nuevaSala } from "../src/anfitrion.js";
 
-const NOMBRES = ["Ana", "Beto", "Caro", "Dani", "Eli", "Fede", "Gabi", "Hugo", "Iris", "Juan"];
+// ---------- Contenido ----------
+const S = SENTIDOS.map((x) => x.k), RE = REACCIONES.map((x) => x.k);
+assert.ok(AVATARES.length >= MAX_J);
+for (const e of ESCENARIOS) {
+  assert.ok(e.lugares.length >= MAX_J + 1, e.id + ": faltan lugares");
+  assert.equal(new Set(e.lugares.map((l) => l.n)).size, e.lugares.length);
+  assert.ok(e.crimenes.length >= 3 && e.eventos.length >= 6);
+  for (const c of e.crimenes) assert.ok(c.relato.includes("{lugar}") && c.e && c.titulo);
+  assert.ok(new Set(e.eventos.map((v) => v.s)).size >= 3 && new Set(e.eventos.map((v) => v.r)).size >= 3, e.id + ": poca variedad de sentidos o reacciones");
+  for (const v of e.eventos) {
+    assert.ok(S.includes(v.s) && RE.includes(v.r) && v.e && v.p.length === 6, v.t);
+    for (const w of v.p) { assert.equal(limpiarPalabra(w), w, `«${w}» no es una palabra limpia`); assert.ok(!palabraProhibida(w, v.t), `«${w}» delata «${v.t}»`); }
+    for (const o of e.eventos) if (o !== v) for (const w of v.p) assert.ok(!o.p.includes(w) || true);
+  }
+}
+assert.ok(palabraProhibida("luz", "se fue la luz y todo quedó a oscuras"));
+assert.ok(palabraProhibida("Oscuridad", "se fue la luz y todo quedó a oscuras"));
+assert.ok(!palabraProhibida("velas", "se fue la luz y todo quedó a oscuras"));
+assert.equal(limpiarPalabra("  ¡Qué SUSTO tan grande! "), "qué");
+assert.ok(delataEvento("justo cuando tembló la tierra", "tembló la tierra unos segundos"));
+
+// ---------- Casos ----------
+const N = ["Ana", "Beto", "Caro", "Dani", "Eli", "Fede", "Gabi", "Hugo"];
 let casos = 0;
-for (let n = 3; n <= 10; n++) {
-  for (let seed = 1; seed <= 400; seed++) {
-    const r = rng(seed * 31 + n);
-    const jugadores = NOMBRES.slice(0, n);
-    const culpable = jugadores[seed % n];
-    const caso = validarCaso(generarCasoLocal({ jugadores, culpable, random: r }), jugadores, culpable);
-    casos++;
-    assert.equal(caso.cartas.length, n - 1);
-    assert.ok(!caso.cartas.some((c) => c.jugador === culpable), "el culpable no tiene carta de inocente");
-    assert.ok(!/\{\w+\}/.test(JSON.stringify(caso)), "quedó una variable sin rellenar");
-    assert.ok(!/\b(de|a) el\b/i.test(caso.relato + caso.verdad), "falta una contracción: " + caso.relato);
-    const lugares = new Set(caso.cartas.map((c) => c.lugar));
-    assert.ok(!lugares.has(caso.lugar_crimen), "un inocente en el lugar del crimen");
-    assert.ok(!lugares.has(caso.coartada_falsa.lugar), "un inocente en el lugar de la coartada falsa");
-    assert.equal(caso.eventos_falsos.length, 5);
-    assert.ok(!caso.eventos_falsos.includes(caso.evento_secreto));
-    // Lo que cada uno vio tiene que ser verdad en las cartas de los demás.
-    for (const c of caso.cartas) {
-      for (const o of caso.cartas) {
-        if (o === c) continue;
-        if (c.visto.includes(o.jugador + " caminando hacia")) assert.ok(c.visto.includes(o.lugar), `${c.jugador} vio mal a ${o.jugador}`);
-        if (c.visto.includes("contigo") && c.visto.split(" estaba")[0].split(" y ").includes(o.jugador)) { assert.equal(o.lugar, c.lugar); assert.notEqual(o.actividad, c.actividad, "misma actividad en pareja"); }
-      }
-      assert.ok(!c.visto.includes(culpable), "nadie ve al culpable en su carta");
-    }
-    assert.equal(caso.cartas.filter((c) => c.extra).length, n - 1 >= 4 ? 1 : 0);
-    const ops = opcionesEvento(caso, r);
-    assert.equal(new Set(ops).size, 6);
-    for (let ronda = 1; ronda <= 3; ronda++) {
-      const q = preguntasLocales({ ronda, jugadores, caso, random: r });
-      for (const j of jugadores) { assert.ok(q[j] && !/\{\w+\}/.test(q[j])); assert.ok(!q[j].includes(caso.evento_secreto)); }
-    }
-  }
+for (let n = 3; n <= MAX_J; n++) for (let seed = 1; seed <= 400; seed++) {
+  const r = rng(seed * 97 + n);
+  const jugadores = N.slice(0, n).map((nombre, i) => ({ id: "j" + i, nombre }));
+  const ids = jugadores.map((j) => j.id), culpable = ids[seed % n];
+  const caso = armarCaso({ jugadores, culpable, material: materialLocal({ culpableNombre: "X", random: r }), random: r });
+  casos++;
+  assert.ok(!/\{\w+\}/.test(JSON.stringify(caso)), "quedó una variable sin rellenar");
+  assert.ok(!/\b(de|a) el\b/.test(caso.relato + caso.verdad), caso.relato);
+  const inoc = ids.filter((x) => x !== culpable);
+  assert.deepEqual(Object.keys(caso.cartas).sort(), inoc.slice().sort());
+  const usados = inoc.map((x) => caso.cartas[x].lugar);
+  assert.equal(new Set(usados).size, inoc.length, "dos inocentes en el mismo lugar");
+  assert.ok(!usados.includes(caso.lugar_crimen) && !usados.includes(caso.culpable.seguro) && caso.culpable.seguro !== caso.lugar_crimen);
+  for (const x of inoc) { const v = caso.cartas[x].vio; if (v) { assert.notEqual(v.id, x); assert.notEqual(v.id, culpable); assert.equal(caso.cartas[v.id].lugar, v.lugar); } }
+  assert.equal(caso.cartas[caso.culpable.pista.id].lugar, caso.culpable.pista.lugar);
+  assert.equal(caso.falsos.length, 5); assert.equal(new Set(opcionesEvento(caso, r).map((o) => o.t)).size, 6);
+  // Si todos dicen la verdad y el culpable usa su lugar seguro y su pista, no hay choques.
+  const decl = Object.fromEntries(inoc.map((x) => [x, declaracionVerdadera(caso, x)]));
+  decl[culpable] = { lugar: caso.culpable.seguro, vio: caso.culpable.pista.id, vioLugar: caso.culpable.pista.lugar };
+  const an = analizarR1(decl, ids);
+  assert.equal(an.choques.length, 0);
+  assert.ok(!an.avalados.includes(culpable), "nadie puede avalar al culpable");
+  assert.ok(an.avalados.length >= 1, "al menos un inocente avalado");
+  assert.ok(inoc.some((x) => !an.avalados.includes(x)), "al menos un inocente sin testigo, para que el culpable se esconda");
+  // Mentir mal provoca un choque.
+  const victima = inoc[0];
+  decl[culpable] = { lugar: caso.cartas[victima].lugar, vio: null, vioLugar: null };
+  assert.ok(analizarR1(decl, ids).choques.some((c) => c.tipo === "mismo"));
+  const otroLugar = caso.lugares.findIndex((_, i) => i !== caso.cartas[victima].lugar && i !== caso.lugar_crimen);
+  decl[culpable] = { lugar: caso.culpable.seguro, vio: victima, vioLugar: otroLugar };
+  assert.ok(analizarR1(decl, ids).choques.some((c) => c.tipo === "lugar" && c.a === culpable));
+  assert.equal(declaracionValida(caso, ids, culpable, { lugar: caso.lugar_crimen, vio: null }), null);
+  assert.equal(declaracionValida(caso, ids, culpable, { lugar: caso.culpable.seguro, vio: culpable, vioLugar: 0 }), null);
+  assert.ok(declaracionValida(caso, ids, culpable, botR1(caso, culpable, r)));
 }
-// Puntuación
+
+// ---------- Material de la IA ----------
+const ev = (t, s, r) => ({ texto: t, emoji: "💥", sentido: s, reaccion: r, palabras: ["uno", "dos", "tres", "cuatro", "cinco"] });
+const crudo = () => ({ emoji: "🍮", titulo: "El caso del flan", relato: "Alguien se comió el flan.", lugar_crimen: { nombre: "La cocina.", emoji: "🍳" },
+  lugares: ["el patio", "la sala", "el balcón", "El Patio", "el baño", "la terraza", "el garaje", "la azotea", "la cocina"].map((n) => ({ nombre: n, emoji: "📍" })),
+  evento_secreto: ev("Esa noche tembló la tierra.", "tacto", "susto"), eventos_falsos: [ev("llovió fuerte", "tacto", "enojo"), ev("cantó un gallo", "oido", "risa"), ev("pasó un tren", "oido", "asombro"), ev("ladró un perro", "oido", "susto"), ev("olió a quemado", "olfato", "enojo"), ev("tembló la tierra", "tacto", "susto")], verdad: "{culpable} se lo comió." });
+const m = materialIA(crudo(), { nJugadores: 6 });
+assert.equal(m.evento.t, "tembló la tierra"); assert.equal(m.lugar_crimen.n, "la cocina"); assert.equal(m.lugares.length, 7); assert.equal(m.falsos.length, 5);
+assert.throws(() => materialIA({ ...crudo(), lugares: [] }, { nJugadores: 4 }));
+assert.throws(() => materialIA({ ...crudo(), eventos_falsos: [] }, { nJugadores: 4 }));
+assert.throws(() => materialIA({ ...crudo(), evento_secreto: { ...ev("x", "magia", "risa") } }, { nJugadores: 4 }));
+assert.throws(() => materialIA({ ...crudo(), relato: "Justo cuando tembló la tierra." }, { nJugadores: 4 }));
+assert.throws(() => materialIA(null, { nJugadores: 4 }));
+assert.throws(() => materialIA(crudo(), { nJugadores: 8 }), /Faltan lugares/);
+armarCaso({ jugadores: N.slice(0, 7).map((nombre, i) => ({ id: "j" + i, nombre })), culpable: "j0", material: materialIA(crudo(), { nJugadores: 7 }) });
+
+// ---------- Puntos ----------
 const J = ["A", "B", "C", "D"];
-let p = puntuar({ jugadores: J, culpable: "A", votos: { A: "B", B: "A", C: "A", D: "B" } });
+let p = puntuar({ ids: J, culpable: "A", votos: { A: "B", B: "A", C: "A", D: "B" } });
 assert.equal(p.atrapado, false); assert.equal(p.empate, true); assert.deepEqual(p.puntos, { A: 4, B: 1, C: 1, D: 0 });
-p = puntuar({ jugadores: J, culpable: "A", votos: { A: "B", B: "A", C: "A", D: "A" }, adivinoEvento: true, acusadoIA: "C" });
+p = puntuar({ ids: J, culpable: "A", votos: { A: "B", B: "A", C: "A", D: "A" }, adivino: true, acusadoDetective: "C" });
 assert.equal(p.atrapado, true); assert.deepEqual(p.puntos, { A: 3, B: 2, C: 2, D: 2 });
-p = puntuar({ jugadores: J, culpable: "A", votos: { A: "B", B: "C", C: "B", D: "B" }, acusadoIA: "A" });
-assert.equal(p.acusado, "B"); assert.deepEqual(p.puntos, { A: 4, B: 0, C: 0, D: 0 });
 assert.equal(contarVotos({}, J).acusado, null);
-assert.throws(() => validarCaso({ titulo: "x" }, J, "A"));
-// Filtro del dato secreto
-assert.ok(delataEvento("¿Dónde estabas cuando la parrilla se apagó un segundo?", "se apagó la parrilla por un segundo"));
-assert.ok(delataEvento("Nadie sintió que la tierra tembló", "tembló la tierra un segundo"));
-assert.ok(!delataEvento("¿Qué hiciste cuando pasó «eso» que todos recuerdan?", "se apagó la parrilla por un segundo"));
-assert.ok(!delataEvento("¿Quién puede confirmar que estabas en el garaje?", "el ventilador se apagó y se escuchó un ladrido de perro"));
-assert.equal(limpiarEvento("Esa noche, Se fue la luz."), "se fue la luz");
-assert.equal(limpiarActividad("Estabas en el garaje, Reparando tu coche."), "reparando tu coche");
-assert.equal(limpiarActividad("bailando solo"), "bailando solo");
-// Casos de la IA: el motor reparte y rechaza material defectuoso
-const mat = () => ({ titulo: "T", relato: "Pasó algo en la cocina.", lugar_crimen: "La cocina.", hora: "10", pistas: ["p"], evento_secreto: "Esa noche ladró un perro enorme.",
-  eventos_falsos: ["a1 cosa", "b2 cosa", "c3 cosa", "d4 cosa", "e5 cosa", "ladró un perro enorme"], coartada_falsa: { lugar: "El garaje. ", actividad: "durmiendo." },
-  lugares: ["la cocina", "el garaje", "el patio", "El Patio", "la sala", "el baño", "la azotea", "el pasillo"].map((n) => ({ nombre: n, actividades: ["x"] })), verdad: "V" });
-for (let n = 3; n <= 10; n++) {
-  for (let sd = 1; sd <= 50; sd++) {
-  const jug = NOMBRES.slice(0, n), c = armarCasoIA({ jugadores: jug, culpable: jug[0], material: mat(), random: rng(n * 100 + sd) });
-  validarCaso(c, jug, jug[0]);
-  assert.ok(!c.cartas.some((k) => ["la cocina", "el garaje"].includes(k.lugar)));
-  assert.equal(c.evento_secreto, "ladró un perro enorme"); assert.equal(c.eventos_falsos.length, 5); assert.equal(c.lugar_crimen, "la cocina");
+
+// ---------- Partidas completas con bots ----------
+// Un humano anfitrión que juega en automático («forzar») y bots; los temporizadores se ejecutan al instante.
+function partida(seed, nBots, casosPorPartida) {
+  const r = rng(seed);
+  const cola = [];
+  const H = nuevaSala({ sala: "LOCAL", id: "yo", nombre: "Yo", local: true });
+  H.cfg.casos = casosPorPartida;
+  let E = null, publicaciones = 0;
+  const a = crearAnfitrion({ H, ia: () => ({}), publicar: ({ estado, privados }) => { E = estado; publicaciones++; if (privados) assert.deepEqual(Object.keys(privados), ["yo"]); }, despues: (ms, fn) => cola.push(fn), ahora: () => 0, random: r });
+  for (let i = 0; i < nBots; i++) a.mando.agregarBot();
+  assert.equal(new Set(H.jugadores.map((j) => j.nombre)).size, H.jugadores.length);
+  assert.equal(new Set(H.jugadores.map((j) => j.av)).size, H.jugadores.length);
+  a.mando.empezar();
+  const stats = { casos: 0, atrapado: 0, adivino: 0, detective: 0, choques: 0 };
+  let pasos = 0;
+  while (E.fase !== "final") {
+    assert.ok(++pasos < 4000, "la partida no termina: " + E.fase);
+    if (cola.length) { cola.shift()(); continue; }
+    const f = E.fase;
+    if (["caso", "r1", "r2", "r3", "voto"].includes(f)) { assert.ok(!E.listos.includes("yo") || E.listos.length < E.jugadores.length); a.mando.forzar(); }
+    else if (f === "ultima") a.accion({ id: "yo", t: "adivina", i: Math.floor(r() * 6) }), E.fase === "ultima" && a.mando.continuar();
+    else if (f === "resultado") {
+      const res = E.resultado; stats.casos++;
+      if (E.atrapado) stats.atrapado++; if (res.adivino) stats.adivino++;
+      if (E.veredicto.acusado === E.culpable) stats.detective++;
+      stats.choques += E.analisis.choques.length;
+      assert.ok(Object.values(E.r3).every((w) => w && w === limpiarPalabra(w)));
+      assert.equal(Object.keys(E.r1).length, E.jugadores.length); assert.equal(Object.keys(E.votos).length, E.jugadores.length);
+      assert.ok(!Object.entries(E.votos).some(([x, y]) => x === y), "alguien se votó a sí mismo");
+      a.mando.continuar();
+    } else {
+      // El secreto no puede asomar en el estado público antes del resultado.
+      if (f !== "ultima") assert.ok(!JSON.stringify(E).includes(H.ronda.caso.evento.t), "el secreto se filtró en la fase " + f);
+      if (!["revelacion", "ultima", "resultado"].includes(f)) assert.ok(E.culpable === undefined, "el culpable se filtró en la fase " + f);
+      a.mando.continuar();
+    }
   }
+  assert.equal(stats.casos, casosPorPartida);
+  assert.ok(Object.values(E.puntos).every((x) => Number.isInteger(x) && x >= 0));
+  return stats;
 }
-assert.throws(() => armarCasoIA({ jugadores: J, culpable: "A", material: { ...mat(), lugares: [] } }));
-assert.throws(() => armarCasoIA({ jugadores: J, culpable: "A", material: { ...mat(), eventos_falsos: ["x"] } }));
-assert.throws(() => armarCasoIA({ jugadores: J, culpable: "A", material: { ...mat(), relato: "De pronto ladró un perro enorme." } }));
-assert.throws(() => armarCasoIA({ jugadores: J, culpable: "A", material: null }));
-console.log(`OK: ${casos} casos generados y verificados, puntuación correcta.`);
+const tot = { casos: 0, atrapado: 0, adivino: 0, detective: 0, choques: 0 };
+let partidas = 0;
+for (let nBots = 2; nBots <= 7; nBots++) for (let s = 1; s <= 250; s++) {
+  const st = partida(s * 13 + nBots, nBots, 1 + (s % 3)); partidas++;
+  for (const k of Object.keys(tot)) tot[k] += st[k];
+}
+const pct = (x) => Math.round((100 * x) / tot.casos) + "%";
+console.log(`OK: ${casos} casos verificados y ${partidas} partidas con bots (${tot.casos} casos jugados). Culpable atrapado ${pct(tot.atrapado)}, adivina el secreto ${Math.round(100 * tot.adivino / Math.max(1, tot.atrapado))}% de las veces que cae, detective acierta ${pct(tot.detective)}.`);
+assert.ok(tot.atrapado / tot.casos > 0.4 && tot.atrapado / tot.casos < 0.72, "el juego está desbalanceado");

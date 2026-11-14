@@ -23,7 +23,7 @@ npm run --silent build
 
 echo "2/6 Recursos"
 rm -rf "$OUT" && mkdir -p "$OUT/classes" "$OUT/dex" "$OUT/assets/www"
-cp www/index.html www/style.css www/app.js "$OUT/assets/www/"
+cp www/index.html www/style.css www/fonts.css www/app.js "$OUT/assets/www/"
 "$BT/aapt2" compile --dir apk-src/res -o "$OUT/res.zip"
 "$BT/aapt2" link -o "$OUT/base.apk" -I "$PLAT" --manifest apk-src/AndroidManifest.xml -A "$OUT/assets" "$OUT/res.zip"
 
